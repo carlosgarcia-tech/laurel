@@ -19,6 +19,16 @@ export default tseslint.config(
   jsxA11y.flatConfigs.recommended,
   {
     rules: {
+      // Los labels de la app anidan texto hasta 3 niveles (label > span > span > texto):
+      // la regla por defecto solo escanea 2 niveles.
+      'jsx-a11y/label-has-associated-control': [
+        'error',
+        { labelComponents: [], labelAttributes: [], controlComponents: [], depth: 3 },
+      ],
+    },
+  },
+  {
+    rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-unused-vars': [

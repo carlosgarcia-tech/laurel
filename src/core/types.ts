@@ -7,6 +7,9 @@ export type TiebreakRule = 'kills' | 'best-rank' | 'booyahs';
 /** Formatos de exportación de la imagen final. */
 export type ImageFormat = '4:5' | '9:16' | '1:1';
 
+/** Fuentes display autoalojadas disponibles en el editor. */
+export type DisplayFont = 'Syne' | 'Oxanium' | 'Space Grotesk' | 'Rubik' | 'Archivo' | 'Sora';
+
 /** Un jugador dentro de una sala/partida. */
 export interface PlayerEntry {
   /** Nombre limpio para mostrar (invisibles reemplazados por espacio, trim). */
@@ -42,6 +45,14 @@ export interface ParsedRoom {
   fileName: string;
   teams: TeamEntry[];
   warnings: ParseWarning[];
+}
+
+/** Archivo cargado en el editor, con su sala parseada. */
+export interface RoomSource {
+  id: string;
+  fileName: string;
+  sizeBytes: number;
+  room: ParsedRoom;
 }
 
 /** Acumulado de un equipo a lo largo de todas las salas. */
@@ -93,6 +104,9 @@ export interface EngineOptions {
   tiebreak: TiebreakRule[];
 }
 
+/** Presets de tema visual para la imagen generada. */
+export type ThemePreset = 'laurel' | 'neon' | 'corona' | 'acero';
+
 /** Ajustes del editor (persistidos con versión de esquema). */
 export interface Settings {
   title: string;
@@ -103,8 +117,16 @@ export interface Settings {
   tiebreak: TiebreakRule[];
   positionPoints: number[];
   killPoints: number;
-  fontFamily: string;
+  fontFamily: DisplayFont;
   textColor: string;
   accentColor: string;
   format: ImageFormat;
+  /** Opacidad del scrim oscuro sobre el fondo propio (0..1). */
+  scrimOpacity: number;
+  /** Preset de diseño (fija texto/acento y el estilo de fondo sugerido). */
+  theme: ThemePreset;
+  /** Mostrar el logo por defecto cuando el usuario no sube uno propio. */
+  useDefaultLogo: boolean;
+  /** Mostrar el fondo por defecto cuando el usuario no sube uno propio. */
+  useDefaultBackground: boolean;
 }
