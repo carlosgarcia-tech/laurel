@@ -83,3 +83,17 @@ se guardan por plantilla (`styleByTemplate`). Contraste mínimo verificado ≥ 4
 
 **Hoja de contactos:** `npm run contact-sheet` muestra las 10 plantillas lado a lado
 (local Vite page, `contact-sheet.html`).
+
+## Despliegue (GitHub Pages y Vercel)
+
+El mismo build funciona en ambos hosts sin tocar código: la ruta base se define solo
+con la variable de entorno `VITE_BASE` (por defecto `/`) y todos los assets se resuelven
+con `import.meta.env.BASE_URL`. Sin router ni rutas absolutas.
+
+**GitHub Pages (automático):** el repo incluye `.github/workflows/deploy.yml` que, en cada
+push a `main`, corre `lint`, `test` y `build` con `VITE_BASE=/<nombre-del-repo>/` y publica
+`dist/`. Configura una vez: _Settings → Pages → Source: GitHub Actions_. No toques nada más.
+
+**Vercel (plan gratuito):** importa el repo, preset **Vite** (autodetectado). Build:
+`npm run build` · output: `dist/`. Deja `VITE_BASE` **sin definir** (raíz `/`). No se
+necesita `vercel.json` ni funciones serverless: la app es 100 % cliente.
