@@ -8,7 +8,9 @@ body {
   margin: 0;
   background-color: var(--bg);
   color: var(--text);
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 20px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -19,14 +21,270 @@ body {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
-input[type='color'] {
+/* Números y metadatos: monoespaciada con cifras tabulares (§3.2). */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Campos de texto (§5.3): alto 40, filete, radio 6. */
+.field {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 120ms var(--ease-out);
+}
+.field::placeholder {
+  color: var(--text-3);
+}
+.field:hover {
+  border-color: var(--text-3);
+}
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* Select nativo: el popup del SO hereda color-scheme; forzamos tokens claros. */
+select.field {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-2) 50%),
+    linear-gradient(135deg, var(--text-2) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+  cursor: pointer;
+}
+select.field option {
+  background: var(--bg);
+  color: var(--text);
+}
+
+input[type='color'].field {
+  padding: 4px;
+  cursor: pointer;
+}
+
+/* Botones (§5.8). */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 120ms var(--ease-out),
+    opacity 120ms var(--ease-out),
+    border-color 120ms var(--ease-out);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.btn-primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  border: none;
+}
+.btn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--text-3);
+}
+.btn-text {
+  background: none;
+  border: none;
+  height: auto;
   padding: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  inline-size: 100%;
-  block-size: 40px;
+  color: var(--text-2);
+  font-weight: 500;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-text:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+.btn-danger {
+  background: none;
+  border: none;
+  height: auto;
+  padding: 0;
+  color: var(--danger);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Radio/checkbox nativos con el acento del sistema. */
+input[type='radio'],
+input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Aislamiento de exportación (FF §6.3): el nodo capturado no anima jamás. */
+[data-capture='true'],
+[data-capture='true'] * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Avisos (§8): entran desde abajo 8 px + opacidad 200 ms; salen opacidad 120 ms. */
+.notice {
+  animation: notice-in 200ms var(--ease-out) both;
+  transition: opacity 120ms var(--ease-out);
+}
+.notice[data-fading='true'] {
+  opacity: 0;
+}
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Vista previa (§8): crossfade de 140 ms entre la imagen anterior y la nueva. */
+.preview-fade {
+  animation: preview-in 140ms var(--ease-out) both;
+}
+@keyframes preview-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Revelado del podio (FF §6.2): primera carga de la jornada, 40 ms de escalón. */
+.podium-reveal {
+  animation: podium-in 220ms var(--ease-out) both;
+}
+@keyframes podium-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tira de plantillas: scroll horizontal con snap, sin barra visible (§5.6). */
+.strip-scroll {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.strip-scroll::-webkit-scrollbar {
+  display: none;
+}
+.strip-thumb {
+  scroll-snap-align: start;
+  transition:
+    transform 120ms var(--ease-out),
+    opacity 160ms var(--ease-out);
+}
+.strip-thumb:active {
+  transform: scale(0.97);
+}
+
+/* Contenido de secciones colapsables: solo opacidad, 120 ms (§5.1/§8). */
+.fade-content {
+  animation: opacity-in 120ms var(--ease-out) both;
+}
+
+/* Indicadores de formato/pestañas: solo opacidad del filete (§8). */
+.underline-tab {
+  border-bottom: 2px solid transparent;
+  transition:
+    border-color 200ms var(--ease-in-out),
+    color 120ms var(--ease-out);
+}
+.underline-tab[aria-selected='true'],
+.underline-tab[data-active='true'] {
+  border-bottom-color: var(--accent);
+}
+
+/* Bottom sheet de plantillas (móvil, §4.1): entra con translateY + opacidad. */
+.sheet {
+  animation: sheet-in 200ms var(--ease-out) both;
+}
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes opacity-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Reduced motion (§8): sin desplazamiento ni escala; opacidad ≤ 120 ms. */
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled),
+  .strip-thumb:active {
+    transform: none;
+  }
+  .notice {
+    animation: opacity-in 120ms linear both;
+  }
+  .preview-fade,
+  .podium-reveal,
+  .fade-content,
+  .sheet {
+    animation: opacity-in 120ms linear both;
+  }
+  .underline-tab {
+    transition: none;
+  }
 }

@@ -24,9 +24,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   override render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div role="alert" style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
-          <h1>Algo salió mal</h1>
-          <p>Ocurrió un error inesperado. Recarga la página para volver a empezar.</p>
+        <div
+          role="alert"
+          className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-[var(--bg)] px-6 text-center text-[var(--text)]"
+        >
+          <h1 className="text-[17px] leading-[22px] font-semibold">Algo salió mal</h1>
+          <p className="text-sm text-[var(--text-2)]">
+            Ocurrió un error inesperado. Recarga la página para volver a empezar.
+          </p>
         </div>
       );
     }

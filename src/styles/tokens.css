@@ -1,25 +1,21 @@
+/* Tokens del CHROME de la app (UI-REDESIGN §3). Sistema aparte y neutro:
+   la imagen exportada es lo único con color fuerte en pantalla. */
 :root {
-  /* Superficies */
-  --bg: #07100e;
-  --surface: #0e1a17;
-  --surface-2: #12241f;
-  --row-alt: #0b1613;
-  --border: #1f3a33;
-  --border-strong: #2a4a42;
-  --track: #16302a;
+  --bg: #141311;
+  --stage: #0e0d0c;
+  --line: #2b2925;
+  --line-strong: #3d3a34;
+  --text: #ece8de;
+  --text-2: #a39d8f;
+  --text-3: #7a7569;
+  --accent: #b9d77a;
+  --danger: #e0644f;
+  --btn-primary-bg: #ece8de;
+  --btn-primary-fg: #141311;
 
-  /* Texto */
-  --text: #f4efe6;
-  --text-2: #b9cbc4;
-  --muted: #8fa8a0;
+  --font-ui: 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  /* Acentos (configurables por el usuario en el editor) */
-  --accent: #34d399;
-  --gold: #e8c27a;
-  --silver: #b8c4c0;
-  --bronze: #c98b5a;
-
-  /* Tipografía */
-  --font-display: 'Syne', system-ui, sans-serif;
-  --font-body: 'Space Grotesk', system-ui, 'Noto Sans', 'Segoe UI Symbol', sans-serif;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }

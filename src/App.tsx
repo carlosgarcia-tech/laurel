@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { computeStandings } from './core/engine/calculate';
 import { parseLog } from './core/parser/parseLog';
 import { buildViewModel } from './core/viewmodel/buildViewModel';
-import type { Settings } from './core/types';
+import type { Settings, TemplateStyleOverrides } from './core/types';
 import { i18n } from './i18n/es';
 import { clearStoredImages } from './storage/images';
 import {
@@ -13,6 +13,7 @@ import {
 } from './storage/persist';
 import { processImage } from './features/assets/processImage';
 import { CalcModePanel } from './features/calc-mode/CalcModePanel';
+import { TiebreakList } from './features/calc-mode/TiebreakList';
 import { copyPngToClipboard } from './features/export/copyToClipboard';
 import { downloadPng, exportPng, slugifyFileName } from './features/export/exportPng';
 import { FileDropzone } from './features/upload/FileDropzone';
@@ -26,32 +27,10 @@ import { Picker } from './features/templates/picker/Picker';
 import { TemplateFrame } from './features/templates/SharedFrame';
 import { ResultImage } from './features/templates/ResultImage';
 import { getTemplate, heightForFormat } from './features/templates/templates';
-import { loadFontPair } from './features/templates/fonts';
+import { getFontPair, loadFontPair } from './features/templates/fonts';
 import { parseTemplate, serializeTemplate, downloadJson } from './features/templates/plantillaIo';
+import { Section } from './ui/Section';
 import sampleLogText from './assets/sample_log.txt?raw';
-
-interface StepCardProps {
-  number: number;
-  title: string;
-  children: React.ReactNode;
-}
-
-function StepCard({ number, title, children }: StepCardProps) {
-  return (
-    <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-      <header className="mb-3 flex items-center gap-3">
-        <span
-          aria-hidden="true"
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-sm font-extrabold text-[#07100e]"
-        >
-          {number}
-        </span>
-        <h2 className="text-sm font-bold tracking-wide uppercase">{title}</h2>
-      </header>
-      {children}
-    </section>
-  );
-}
 
 const CANVAS_WIDTH = 1080;
 const FORMATS: Array<Settings['format']> = ['4:5', '9:16', '1:1'];
@@ -67,23 +46,74 @@ function App() {
   );
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'ok' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
+  const [statusFading, setStatusFading] = useState(false);
+  // Crossfade de vista previa: desactivado en el cambio por teclado (FF §6.2).
+  const [previewFade, setPreviewFade] = useState(true);
+  // Revelado del podio: solo la primera vez que se renderiza una jornada (FF §6.2).
+  const [podiumReveal, setPodiumReveal] = useState(true);
+  // Secciones colapsables: 01 abierta si no hay salas, el resto por defecto.
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({
+    files: true,
+    info: true,
+    mode: false,
+    tiebreak: false,
+    style: false,
+  }));
+  // Confirmación inline de «Borrar datos» (§6): sin alert(), 4 s.
+  const [confirmClear, setConfirmClear] = useState(false);
+  const confirmTimer = useRef<number | undefined>(undefined);
+  // Bottom sheet de plantillas (móvil, §4.1).
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // Ref al nodo exportable: se lee al momento del clic de exportar.
+  const exportNodeRef = useRef<HTMLDivElement | null>(null);
 
   const template = getTemplate(settings.templateId);
 
+  // Nueva jornada (o primera carga): el podio entra con stagger una sola vez.
+  useEffect(() => {
+    setPodiumReveal(true);
+    const timer = window.setTimeout(() => setPodiumReveal(false), 600);
+    return () => window.clearTimeout(timer);
+  }, [settings.matchday]);
+
   const patch = useCallback((values: Partial<Settings>) => {
     setSettings((current) => ({ ...current, ...values }));
+    // El estado de exportación no debe quedarse pegado si luego cambia algo (P0.2).
+    setExportStatus((status) => (status === 'ok' || status === 'error' ? 'idle' : status));
+    setStatusMessage('');
+    setStatusFading(false);
   }, []);
+
+  // Aviso "ok" (p. ej. «PNG descargado»): se auto-oculta a los 4 s con fade de salida.
+  useEffect(() => {
+    if (exportStatus !== 'ok') return;
+    const fadeTimer = window.setTimeout(() => setStatusFading(true), 4000);
+    const clearTimer = window.setTimeout(() => {
+      setExportStatus('idle');
+      setStatusMessage('');
+      setStatusFading(false);
+    }, 4150);
+    return () => {
+      window.clearTimeout(fadeTimer);
+      window.clearTimeout(clearTimer);
+    };
+  }, [exportStatus, statusMessage]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => saveSettings(settings), 200);
     return () => window.clearTimeout(timer);
   }, [settings]);
 
-  // Fuentes del par activo (perezoso, una vez por par).
+  // La sección de archivos se reabre sola si se vacían las salas.
+  useEffect(() => {
+    if (rooms.length === 0) setOpenSections((s) => ({ ...s, files: true }));
+  }, [rooms.length]);
+
+  // Fuentes del par activo (override de la plantilla > par por defecto de la plantilla).
   const activeFontPairId = useMemo(() => {
     const overrides = settings.styleByTemplate[template.id];
-    return overrides?.fontPairId ?? settings.fontFamily;
-  }, [settings.styleByTemplate, settings.fontFamily, template.id]);
+    return overrides?.fontPairId ?? template.fontPairId;
+  }, [settings.styleByTemplate, template.fontPairId, template.id]);
   useEffect(() => {
     loadFontPair(activeFontPairId);
   }, [activeFontPairId]);
@@ -132,22 +162,45 @@ function App() {
     });
   }, [engineResult, rooms, settings.title, settings.matchday, settings.date, settings.moderator]);
 
-  // Corolario de estilo por plantilla: overrides propios > valores globales.
+  // Overrides de ESTA plantilla. Sin override → manda el token/par de la plantilla
+  // (nunca el de otra plantilla): el acento/texto NO son globales (AJUSTES.md P0.1).
   const overrides = settings.styleByTemplate[template.id];
   const templateStyle = {
-    accent: overrides?.accent ?? settings.accentColor,
-    text: overrides?.text ?? settings.textColor,
-    fontPairId: overrides?.fontPairId ?? settings.fontFamily,
+    accent: overrides?.accent,
+    text: overrides?.text,
+    fontPairId: overrides?.fontPairId,
   };
 
-  // Logo/fondo efectivos (usuario > por defecto). El fondo se procesa siempre
-  // con scrim horneado según el tema de la plantilla (oscuro con tinta oscura,
-  // claro con tinta clara, §7.2).
+  const updateOverrides = useCallback(
+    (values: Partial<TemplateStyleOverrides>) => {
+      setSettings((current) => {
+        const existing = current.styleByTemplate[template.id] ?? {};
+        const merged: TemplateStyleOverrides = { ...existing };
+        for (const key of ['accent', 'text', 'fontPairId'] as const) {
+          const value = values[key];
+          if (value === undefined || value === '') delete merged[key];
+          else merged[key] = value;
+        }
+        return {
+          ...current,
+          styleByTemplate: { ...current.styleByTemplate, [template.id]: merged },
+        };
+      });
+    },
+    [template.id],
+  );
+
+  // Logo/fondo efectivos (usuario > por defecto). El fondo por defecto solo se
+  // usa en plantillas OSCURAS; las claras van con color plano bg + decoración
+  // (TEMPLATESv2 §7, FF §7). El fondo del usuario se hornea con scrim teñido
+  // con el bg de la plantilla.
   const effectiveLogoRaw =
     logo.image.dataUrl ?? (settings.useDefaultLogo ? defaultAssets.logo : undefined);
   const effectiveBackgroundRaw =
     background.image.dataUrl ??
-    (settings.useDefaultBackground ? defaultAssets.background : undefined);
+    (settings.useDefaultBackground && template.theme === 'dark'
+      ? defaultAssets.background
+      : undefined);
 
   useEffect(() => {
     let active = true;
@@ -161,8 +214,9 @@ function App() {
           settings.useDefaultBackground || background.image.dataUrl !== undefined
             ? settings.scrimOpacity
             : undefined;
-        const scrim =
-          template.theme === 'light' ? { r: 243, g: 238, b: 226 } : { r: 7, g: 16, b: 14 };
+        // Scrim teñido con el bg de la plantilla (FF §7: oscuro en booyah/
+        // zona-roja, claro en kalahari), no con el color fijo de Corona.
+        const scrim = hexToRgb(template.tokens.bg);
         const backgroundProcessed =
           effectiveBackgroundRaw !== undefined
             ? await processImage(effectiveBackgroundRaw, 'scrim', { scrimOpacity, scrim })
@@ -179,7 +233,7 @@ function App() {
   }, [
     effectiveLogoRaw,
     effectiveBackgroundRaw,
-    template.theme,
+    template.tokens.bg,
     settings.scrimOpacity,
     settings.useDefaultBackground,
     background.image.dataUrl,
@@ -188,13 +242,13 @@ function App() {
   const canvasHeight = heightForFormat(settings.format);
   const exportInfo = { w: CANVAS_WIDTH * 2, h: canvasHeight * 2 };
   const hasRooms = rooms.length > 0;
+  const liveTitle = i18n.liveTitle(settings.matchday, settings.title);
+  const totalFiles = rooms.length;
 
-  async function handleExport(
-    action: 'download' | 'copy',
-    node: HTMLElement | null,
-  ): Promise<void> {
+  async function handleExport(action: 'download' | 'copy'): Promise<void> {
+    const node = exportNodeRef.current;
     if (!node || !engineResult) {
-      setStatusMessage(i18n.preview.selectFilesFirst);
+      setStatusMessage(i18n.upload.noRooms);
       setExportStatus('error');
       return;
     }
@@ -236,6 +290,7 @@ function App() {
         setStatusMessage(i18n.style.templateInvalid);
         return;
       }
+      setPreviewFade(true);
       patch(bundle.settings);
       if (bundle.images.logo) logo.commit(await blobFromDataUrl(bundle.images.logo));
       if (bundle.images.background)
@@ -249,6 +304,13 @@ function App() {
   }
 
   function handleClearData(): void {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      window.clearTimeout(confirmTimer.current);
+      confirmTimer.current = window.setTimeout(() => setConfirmClear(false), 4000);
+      return;
+    }
+    window.clearTimeout(confirmTimer.current);
     clearStoredSettings();
     void clearStoredImages();
     logo.commit(undefined);
@@ -258,119 +320,143 @@ function App() {
     window.location.reload();
   }
 
-  let innerPreviewNode: HTMLDivElement | null = null;
+  function toggleSection(key: string): void {
+    setOpenSections((s) => ({ ...s, [key]: !s[key] }));
+  }
+
+  const pickerNode = (
+    <Picker
+      templateId={settings.templateId}
+      onSelect={(id, options) => {
+        setPreviewFade(options?.instant !== true);
+        patch({ templateId: id });
+      }}
+      sampleVm={vm}
+    />
+  );
 
   return (
-    <div className="min-h-dvh">
-      <header className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-3 px-4 pt-6 sm:px-6">
-        <div className="flex items-baseline gap-3">
-          <h1
-            className="text-2xl font-extrabold tracking-tight"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            {i18n.brand}
-          </h1>
-          <span className="text-sm text-[var(--text-2)]">{i18n.tagline}</span>
-        </div>
-        <span className="hidden rounded-full border border-[var(--border-strong)] px-3 py-1 text-xs text-[var(--text-2)] sm:inline">
-          {i18n.privacyBadge}
-        </span>
+    <div className="flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
+      {/* Barra superior (§4): marca, título en vivo, borrar datos. */}
+      <header
+        className="flex h-14 shrink-0 items-center gap-4 border-b border-[var(--line)] px-4"
+        style={{ fontFamily: 'var(--font-ui)' }}
+      >
+        <span className="text-[17px] leading-[22px] font-semibold">{i18n.brand}</span>
+        {liveTitle && (
+          <span className="min-w-0 flex-1 truncate text-center text-sm text-[var(--text-2)]">
+            {liveTitle}
+          </span>
+        )}
         <button
           type="button"
           onClick={handleClearData}
-          className="ml-auto rounded-lg border border-[var(--border-strong)] px-3 py-1.5 text-xs text-[var(--text-2)] hover:border-[var(--bronze)] hover:text-[var(--bronze)]"
+          className={`btn-text shrink-0 text-[13px] ${confirmClear ? 'text-[var(--danger)]' : ''}`}
         >
-          {i18n.clearData}
+          {confirmClear ? i18n.clearDataConfirm : i18n.clearData}
         </button>
       </header>
 
-      <main className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-5 px-3 pb-10 pt-5 sm:px-6 sm:gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
-          <StepCard number={1} title={i18n.steps.files}>
-            <FileDropzone onFiles={(files) => void addFiles(files)}>
-              {notices.length > 0 && (
-                <ul className="mt-3 space-y-1 text-left" role="alert">
-                  {notices.map((notice) => (
-                    <li
-                      key={notice.id}
-                      className="rounded-md border border-[var(--bronze)] bg-[var(--surface-2)] px-2 py-1 text-[11px] text-[var(--bronze)]"
-                    >
-                      {`${notice.fileName}: ${notice.message}`}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </FileDropzone>
+      <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[400px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+        {/* Columna izquierda (§4): pasos 01–05, scroll propio. */}
+        <div className="min-h-0 min-w-0 overflow-y-auto border-[var(--line)] px-5 py-5 lg:border-r">
+          <Section
+            number="01"
+            title={i18n.sections.files}
+            summary={
+              totalFiles > 0 ? i18n.sections.filesSummary(totalFiles, rooms.length) : undefined
+            }
+            open={openSections.files === true}
+            onToggle={() => toggleSection('files')}
+          >
+            {notices.length > 0 && (
+              <ul className="mb-3 space-y-1 text-left" role="alert">
+                {notices.map((notice) => (
+                  <li key={notice.id} className="notice text-[12px] text-[var(--danger)]">
+                    {`${notice.fileName}: ${notice.message}`}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <FileDropzone onFiles={(files) => void addFiles(files)} compact={hasRooms} />
             <FileList rooms={rooms} onRemove={removeRoom} />
-          </StepCard>
+          </Section>
 
-          <StepCard number={2} title={i18n.steps.info}>
+          <Section
+            number="02"
+            title={i18n.sections.info}
+            summary={settings.title || undefined}
+            open={openSections.info === true}
+            onToggle={() => toggleSection('info')}
+          >
             <TournamentForm settings={settings} onChange={patch} />
-          </StepCard>
+          </Section>
 
-          <StepCard number={3} title={i18n.steps.mode}>
+          <Section
+            number="03"
+            title={i18n.sections.mode}
+            summary={i18n.mode[settings.mode]}
+            open={openSections.mode === true}
+            onToggle={() => toggleSection('mode')}
+          >
             <CalcModePanel settings={settings} engineResult={engineResult} onChange={patch} />
-          </StepCard>
+          </Section>
 
-          <StepCard number={4} title={i18n.steps.template}>
-            <Picker
-              templateId={settings.templateId}
-              onSelect={(id) => patch({ templateId: id })}
-              sampleVm={vm}
-            />
-          </StepCard>
+          <Section
+            number="04"
+            title={i18n.sections.tiebreak}
+            summary={
+              settings.tiebreak.length > 0
+                ? i18n.mode.tiebreakOrder(settings.tiebreak.map((r) => i18n.mode[r] as string))
+                : i18n.mode.tiebreakOrder([])
+            }
+            open={openSections.tiebreak === true}
+            onToggle={() => toggleSection('tiebreak')}
+          >
+            <TiebreakList value={settings.tiebreak} onChange={(tiebreak) => patch({ tiebreak })} />
+          </Section>
 
-          <StepCard number={5} title={i18n.steps.customize}>
+          <Section
+            number="05"
+            title={i18n.sections.style}
+            summary={`${template.name} · ${getFontPair(activeFontPairId).label}`}
+            open={openSections.style === true}
+            onToggle={() => toggleSection('style')}
+          >
             <StylePanel
               settings={settings}
               onChange={patch}
               config={template}
+              overrides={templateStyle}
+              onOverridesChange={updateOverrides}
               logo={logo}
               background={background}
               onExportTemplate={handleExportTemplate}
               onImportTemplate={(file) => void handleImportTemplate(file)}
             />
-          </StepCard>
+          </Section>
         </div>
 
-        <div className="order-1 flex min-w-0 flex-col gap-4 lg:order-2 lg:sticky lg:top-4 lg:self-start">
-          <div className="w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-bold tracking-wide uppercase">
-                  {`${template.name} · vista previa`}
-                </h2>
-                <p className="text-[11px] text-[var(--muted)]">
-                  {i18n.preview.help(exportInfo.w, exportInfo.h)}
-                </p>
-              </div>
-              <fieldset>
-                <legend className="sr-only">{i18n.preview.formatLabel}</legend>
-                <div className="flex gap-1 rounded-lg border border-[var(--border-strong)] p-1">
-                  {FORMATS.map((formatItem) => (
-                    <label
-                      key={formatItem}
-                      className="cursor-pointer rounded-md px-3 py-1 text-xs has-[:checked]:bg-[var(--accent)] has-[:checked]:text-[#07100e]"
-                    >
-                      <input
-                        type="radio"
-                        name="choose-format"
-                        className="sr-only"
-                        checked={settings.format === formatItem}
-                        onChange={() => patch({ format: formatItem })}
-                      />
-                      {formatItem}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            </div>
-
+        {/* Columna derecha (§4): escenario con la imagen lo más grande posible. */}
+        <div className="flex min-h-0 flex-col bg-[var(--stage)]">
+          <div className="relative flex min-h-0 flex-1 items-center justify-center p-3 lg:p-4">
+            {/* Etiqueta EJEMPLO cuando no hay salas (§4). */}
+            {!hasRooms && (
+              <span
+                aria-hidden="true"
+                className="mono absolute top-2 right-2 z-10 border border-[var(--line-strong)] px-2 py-0.5 text-[11px] text-[var(--text-3)]"
+              >
+                {i18n.preview.example}
+              </span>
+            )}
             <TemplateFrame
               width={CANVAS_WIDTH}
               height={canvasHeight}
+              maxHeight={1400}
+              contentKey={`${template.id}-${settings.format}`}
+              fade={previewFade}
               innerRef={(node) => {
-                innerPreviewNode = node;
+                exportNodeRef.current = node;
               }}
             >
               <ResultImage
@@ -381,44 +467,126 @@ function App() {
                 format={settings.format}
                 width={CANVAS_WIDTH}
                 height={canvasHeight}
+                reveal={podiumReveal}
               />
             </TemplateFrame>
+          </div>
 
-            {exportStatus === 'error' && (
-              <p role="alert" className="mt-3 text-xs text-[var(--bronze)]">
-                {statusMessage}
-              </p>
-            )}
-            {exportStatus === 'ok' && (
-              <p role="status" className="mt-3 text-xs text-[var(--accent)]">
+          {/* Barra inferior compacta: formato + exportación + resolución (§5.7). */}
+          <div className="shrink-0 border-t border-[var(--line)] px-4 py-2.5 lg:px-5">
+            {(exportStatus === 'error' || exportStatus === 'ok') && (
+              <p
+                role={exportStatus === 'error' ? 'alert' : 'status'}
+                aria-live={exportStatus === 'error' ? undefined : 'polite'}
+                data-fading={statusFading ? 'true' : 'false'}
+                className={`notice mb-2 text-[13px] ${
+                  exportStatus === 'error' ? 'text-[var(--danger)]' : 'text-[var(--accent)]'
+                }`}
+              >
                 {statusMessage}
               </p>
             )}
             <p role="status" aria-live="polite" className="sr-only">
               {exportStatus === 'exporting' ? i18n.preview.exporting : ''}
             </p>
-
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <fieldset>
+                <legend className="sr-only">{i18n.preview.formatLabel}</legend>
+                <div role="radiogroup" className="flex items-baseline gap-3">
+                  {FORMATS.map((formatItem) => (
+                    <button
+                      key={formatItem}
+                      type="button"
+                      role="radio"
+                      aria-checked={settings.format === formatItem}
+                      aria-label={`${i18n.preview.formatLabel} ${formatItem}`}
+                      data-active={settings.format === formatItem}
+                      onClick={() => {
+                        setPreviewFade(true);
+                        patch({ format: formatItem });
+                      }}
+                      className="underline-tab mono cursor-pointer pb-1 text-[13px] text-[var(--text-2)]"
+                    >
+                      {formatItem}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              <span aria-hidden="true" className="mx-1 h-4 w-px bg-[var(--line)]" />
               <button
                 type="button"
                 disabled={!hasRooms || exportStatus === 'exporting'}
-                onClick={() => void handleExport('download', innerPreviewNode)}
-                className="flex-1 rounded-lg bg-[var(--accent)] px-5 py-2.5 text-sm font-bold text-[#07100e] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+                onClick={() => void handleExport('download')}
+                className="btn btn-primary"
               >
                 {exportStatus === 'exporting' ? i18n.preview.exporting : i18n.preview.download}
               </button>
               <button
                 type="button"
                 disabled={!hasRooms || exportStatus === 'exporting'}
-                onClick={() => void handleExport('copy', innerPreviewNode)}
-                className="flex-1 rounded-lg border border-[var(--border-strong)] px-5 py-2.5 text-sm font-semibold text-[var(--text)] hover:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+                onClick={() => void handleExport('copy')}
+                className="btn btn-secondary"
               >
                 {i18n.preview.copy}
               </button>
+              {!hasRooms && (
+                <span className="text-[12px] text-[var(--text-3)]">{i18n.upload.noRooms}</span>
+              )}
+              <span className="mono ml-auto text-[12px] text-[var(--text-3)]">
+                {i18n.preview.resolution(exportInfo.w, exportInfo.h)}
+              </span>
             </div>
           </div>
+
+          {/* Tira de plantillas (§5.6): siempre visible en escritorio. */}
+          <div className="hidden shrink-0 border-t border-[var(--line)] bg-[var(--bg)] px-4 py-3 lg:block lg:px-5">
+            {pickerNode}
+          </div>
+
+          {/* Móvil (§4.1): acceso a plantillas vía bottom sheet. */}
+          <div className="shrink-0 border-t border-[var(--line)] px-4 py-3 lg:hidden">
+            <button
+              type="button"
+              className="btn btn-secondary w-full"
+              onClick={() => setSheetOpen(true)}
+            >
+              {i18n.picker.openSheet(template.name)}
+            </button>
+          </div>
+          {sheetOpen && (
+            <>
+              <div
+                aria-hidden="true"
+                className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+                onClick={() => setSheetOpen(false)}
+              />
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={i18n.picker.groupLabel}
+                className="sheet fixed inset-x-0 bottom-0 z-50 max-h-[70vh] overflow-y-auto border-t border-[var(--line)] bg-[var(--bg)] px-4 py-4 lg:hidden"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-medium">{i18n.picker.groupLabel}</span>
+                  <button
+                    type="button"
+                    className="btn-text text-[13px]"
+                    onClick={() => setSheetOpen(false)}
+                  >
+                    {i18n.picker.closeSheet}
+                  </button>
+                </div>
+                {pickerNode}
+              </div>
+            </>
+          )}
         </div>
       </main>
+
+      {/* Pie (§4): privacidad, sin badge. */}
+      <footer className="shrink-0 border-t border-[var(--line)] px-5 py-3">
+        <p className="text-[12px] text-[var(--text-3)]">{i18n.privacy}</p>
+      </footer>
     </div>
   );
 }
@@ -426,6 +594,16 @@ function App() {
 async function blobFromDataUrl(dataUrl: string): Promise<Blob> {
   const response = await fetch(dataUrl);
   return response.blob();
+}
+
+/** `#rrggbb` → {r,g,b} para teñir el scrim con el bg de la plantilla. */
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const raw = hex.replace('#', '');
+  return {
+    r: parseInt(raw.slice(0, 2), 16),
+    g: parseInt(raw.slice(2, 4), 16),
+    b: parseInt(raw.slice(4, 6), 16),
+  };
 }
 
 export default App;

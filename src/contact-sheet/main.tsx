@@ -11,9 +11,9 @@ import '../styles/tokens.css';
 import '../styles/fonts.css';
 
 /**
- * Hoja de contactos (TEMPLATESv2 §10): las 10 plantillas con el log de muestra
- * en 4:5 en una cuadrícula — para verificar de un golpe que son «la misma
- * familia» y que ninguna es solo un cambio de color de otra.
+ * Hoja de contactos (TEMPLATESv2 §10 + FF §8): las 13 plantillas con el log de
+ * muestra en 4:5 en una cuadrícula — para verificar de un golpe que son «la
+ * misma familia» y que ninguna es solo un cambio de color de otra.
  */
 
 const room = parseLog(sampleLogText, 'MatchResult_example_log.txt');
@@ -31,7 +31,7 @@ const vm = buildViewModel(engineResult, rooms, {
   moderator: 'Moderador Final',
 });
 
-// Cargar los 10 pares para la hoja completa.
+// Cargar los 13 pares para la hoja completa.
 for (const pair of FONT_PAIRS) loadFontPair(pair.id);
 
 const CARD_WIDTH = 360;
@@ -41,7 +41,7 @@ function App() {
     <div
       style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100dvh', padding: 24 }}
     >
-      <h1 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>
+      <h1 style={{ fontFamily: 'var(--font-ui)', marginTop: 0 }}>
         Hoja de contactos · {TEMPLATES.length} plantillas
       </h1>
       <p style={{ color: 'var(--text-2)', maxWidth: 720 }}>
@@ -65,7 +65,7 @@ function App() {
                   width: CARD_WIDTH,
                   height: height * scale,
                   overflow: 'hidden',
-                  border: '1px solid var(--border-strong)',
+                  border: '1px solid var(--line-strong)',
                   borderRadius: 8,
                 }}
               >

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { Settings } from '../../core/types';
+import type { Settings, TemplateStyleOverrides } from '../../core/types';
 import { FONT_PAIRS, getFontPair } from '../templates/fonts';
 import type { TemplateConfig } from '../templates/types';
 import { i18n } from '../../i18n/es';
@@ -11,17 +11,23 @@ interface StylePanelProps {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   config: TemplateConfig;
+  /** Overrides de la plantilla ACTIVA; vacío = tokens/par por defecto de la plantilla. */
+  overrides: TemplateStyleOverrides;
+  /** Escribe (o limpia) un override en la plantilla activa — nunca global. */
+  onOverridesChange: (patch: Partial<TemplateStyleOverrides>) => void;
   logo: StoredImageController;
   background: StoredImageController;
   onExportTemplate: () => void;
   onImportTemplate: (file: File) => void;
 }
 
-/** Paso 5: personalización (§7): fuente, colores, logo y fondo — en todas las plantillas. */
+/** Estilo (§5/§7): fuente, colores, logo y fondo — por plantilla, sin tarjetas. */
 export function StylePanel({
   settings,
   onChange,
   config,
+  overrides,
+  onOverridesChange,
   logo,
   background,
   onExportTemplate,
@@ -30,8 +36,11 @@ export function StylePanel({
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const noticeTimer = useRef<number | undefined>(undefined);
 
-  // El contraste del texto se mide contra el bg declarado de la plantilla.
-  const contrast = contrastRatio(settings.textColor, config.tokens.bg);
+  const effectiveFontId = overrides.fontPairId ?? config.fontPairId;
+  const effectiveAccent = overrides.accent ?? config.tokens.accent;
+  const effectiveText = overrides.text ?? config.tokens.text;
+
+  const contrast = contrastRatio(effectiveText, config.tokens.bg);
   const lowContrast = contrast !== undefined && contrast < 4.5;
 
   async function pickImage(key: 'logo' | 'background', file: File): Promise<void> {
@@ -80,17 +89,11 @@ export function StylePanel({
     defaultKey: 'logo' | 'background';
   }) {
     return (
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+      <div className="min-w-0">
         <p className="text-xs font-medium text-[var(--text-2)]">{label}</p>
         <div className="mt-2 flex items-center gap-3">
-          <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)]">
-            {dataUrl ? (
-              <img src={dataUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <span aria-hidden="true" className="text-lg text-[var(--muted)]">
-                ◻
-              </span>
-            )}
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[2px] border border-[var(--line-strong)] bg-[var(--stage)]">
+            {dataUrl ? <img src={dataUrl} alt="" className="h-full w-full object-cover" /> : null}
           </div>
           <input
             id={id}
@@ -103,18 +106,15 @@ export function StylePanel({
               e.target.value = '';
             }}
           />
-          <label
-            htmlFor={id}
-            className="cursor-pointer rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs hover:border-[var(--accent)]"
-          >
-            {i18n.upload.chooseButton}
+          <label htmlFor={id} className="btn-text cursor-pointer text-[13px]">
+            {i18n.upload.choose}
           </label>
           {dataUrl && (
             <button
               type="button"
               aria-label={`${i18n.style.removeImage}: ${label}`}
               onClick={onRemove}
-              className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs text-[var(--text-2)] hover:text-[var(--text)]"
+              className="btn-text text-[13px]"
             >
               {i18n.style.removeImage}
             </button>
@@ -122,25 +122,24 @@ export function StylePanel({
         </div>
         <label
           htmlFor={`use-default-${defaultKey}`}
-          className="mt-2 flex cursor-pointer items-center gap-2 text-[11px] text-[var(--text-2)]"
+          className="mt-2 flex cursor-pointer items-center gap-2 text-[12px] text-[var(--text-3)]"
         >
           <input
             id={`use-default-${defaultKey}`}
             type="checkbox"
             checked={defaultOn}
             onChange={(e) => onToggleDefault(e.target.checked)}
-            className="accent-[var(--accent)]"
           />
           {i18n.style.useDefault}
         </label>
-        <p className="mt-1 text-[11px] text-[var(--muted)]">{hint}</p>
+        <p className="mt-1 text-[11px] text-[var(--text-3)]">{hint}</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ImageField
           id="pick-logo"
           label={i18n.style.logo}
@@ -165,8 +164,8 @@ export function StylePanel({
         />
       </div>
 
-      <label className="flex items-center justify-between gap-2 text-xs text-[var(--text-2)]">
-        <span>{i18n.style.scrim}</span>
+      <label className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-[var(--text-2)]">{i18n.style.scrim}</span>
         <input
           type="range"
           min={0}
@@ -179,12 +178,12 @@ export function StylePanel({
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs font-medium text-[var(--text-2)]">
-        {i18n.style.font}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-[var(--text-2)]">{i18n.style.font}</span>
         <select
-          value={settings.fontFamily}
-          onChange={(e) => onChange({ fontFamily: e.target.value as Settings['fontFamily'] })}
-          className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+          value={effectiveFontId}
+          onChange={(e) => onOverridesChange({ fontPairId: e.target.value })}
+          className="field cursor-pointer"
         >
           {FONT_PAIRS.map((pair) => (
             <option key={pair.id} value={pair.id}>
@@ -192,50 +191,47 @@ export function StylePanel({
             </option>
           ))}
         </select>
-        <span className="text-[10px] text-[var(--muted)]">
-          {`${i18n.style.fontHintPeso} ${getFontPair(settings.fontFamily).displayWeights}`}
+        <span className="mono text-[11px] text-[var(--text-3)]">
+          {`${i18n.style.fontHintPeso} ${getFontPair(effectiveFontId).displayWeights}`}
         </span>
       </label>
 
-      <label className="flex flex-col gap-1 text-xs font-medium text-[var(--text-2)]">
-        {i18n.style.accentColor}
-        <input
-          type="color"
-          value={settings.accentColor}
-          onChange={(e) => onChange({ accentColor: e.target.value })}
-          aria-label={i18n.style.accentColor}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-xs font-medium text-[var(--text-2)]">
-        {i18n.style.textColor}
-        <input
-          type="color"
-          value={settings.textColor}
-          onChange={(e) => onChange({ textColor: e.target.value })}
-          aria-label={i18n.style.textColor}
-        />
-      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-[var(--text-2)]">{i18n.style.accentColor}</span>
+          <input
+            type="color"
+            value={effectiveAccent}
+            onChange={(e) => onOverridesChange({ accent: e.target.value })}
+            aria-label={i18n.style.accentColor}
+            className="field h-10"
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-[var(--text-2)]">{i18n.style.textColor}</span>
+          <input
+            type="color"
+            value={effectiveText}
+            onChange={(e) => onOverridesChange({ text: e.target.value })}
+            aria-label={i18n.style.textColor}
+            className="field h-10"
+          />
+        </label>
+      </div>
 
       {lowContrast && (
-        <p
-          role="status"
-          className="rounded-lg border border-[var(--gold)] p-2 text-xs text-[var(--gold)]"
-        >
+        <p role="status" className="text-[12px] text-[var(--danger)]">
           {i18n.style.contrastWarn}
         </p>
       )}
       {notice && (
-        <p
-          role="alert"
-          className="rounded-lg border border-[var(--bronze)] p-2 text-xs text-[var(--bronze)]"
-        >
+        <p role="alert" className="notice text-[12px] text-[var(--danger)]">
           {notice}
         </p>
       )}
 
       {/* Plantilla JSON: ajustes + imágenes embebidas */}
-      <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
+      <div className="flex flex-wrap items-center gap-4 border-t border-[var(--line)] pt-3">
         <input
           id="plantilla-import"
           type="file"
@@ -247,17 +243,10 @@ export function StylePanel({
             e.target.value = '';
           }}
         />
-        <button
-          type="button"
-          onClick={onExportTemplate}
-          className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs text-[var(--text-2)] hover:border-[var(--accent)] hover:text-[var(--text)]"
-        >
+        <button type="button" onClick={onExportTemplate} className="btn-text text-[13px]">
           {i18n.style.exportTemplate}
         </button>
-        <label
-          htmlFor="plantilla-import"
-          className="cursor-pointer rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs text-[var(--text-2)] hover:border-[var(--accent)] hover:text-[var(--text)]"
-        >
+        <label htmlFor="plantilla-import" className="btn-text cursor-pointer text-[13px]">
           {i18n.style.importTemplate}
         </label>
       </div>

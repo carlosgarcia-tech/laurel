@@ -1,14 +1,17 @@
 import { useCallback, useRef, useState } from 'react';
-import type { DragEvent, ReactNode } from 'react';
+import type { DragEvent } from 'react';
 import { i18n } from '../../i18n/es';
 
 interface FileDropzoneProps {
   onFiles: (files: File[]) => void;
-  children?: ReactNode;
+  compact?: boolean;
 }
 
-/** Zona de arrastrar/soltar múltiple para logs de resultados (.txt/.log). */
-export function FileDropzone({ onFiles, children }: FileDropzoneProps) {
+/**
+ * Zona de logs (UI-REDESIGN §5.2): filete punteado de 1 px, 96 px de alto,
+ * sin icono grande. Con archivos cargados se reduce a «Añadir más».
+ */
+export function FileDropzone({ onFiles, compact = false }: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -30,38 +33,59 @@ export function FileDropzone({ onFiles, children }: FileDropzoneProps) {
 
   const handleDragLeave = useCallback(() => setDragging(false), []);
 
+  const input = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept=".txt,.log,.log1,.log.txt"
+      multiple
+      className="sr-only"
+      id="dropzone-input"
+      onChange={(e) => {
+        onFiles([...(e.target.files ?? [])]);
+        e.target.value = '';
+      }}
+    />
+  );
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3">
+        {input}
+        <button type="button" onClick={openPicker} className="btn-text text-[13px]">
+          {i18n.upload.addMore}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={i18n.upload.dropHint}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openPicker();
+        }
+      }}
       className={[
-        'rounded-xl border-2 border-dashed p-4 text-center transition-colors',
-        dragging ? 'border-[var(--accent)] bg-[var(--surface-2)]' : 'border-[var(--border-strong)]',
+        'flex h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-[2px] border border-dashed px-4 text-center transition-colors',
+        dragging
+          ? 'border-[var(--accent)]'
+          : 'border-[var(--line-strong)] hover:border-[var(--text-3)]',
       ].join(' ')}
+      onClick={openPicker}
     >
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".txt,.log,.log1,.log.txt"
-        multiple
-        className="sr-only"
-        id="dropzone-input"
-        onChange={(e) => {
-          onFiles([...(e.target.files ?? [])]);
-          e.target.value = '';
-        }}
-      />
-      <p className="text-sm font-medium">{i18n.upload.dropTitle}</p>
-      <p className="mt-1 text-xs text-[var(--text-2)]">{i18n.upload.dropSubtitle}</p>
-      <button
-        type="button"
-        onClick={openPicker}
-        className="mt-3 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#07100e] hover:opacity-90"
-      >
-        {i18n.upload.chooseButton}
+      {input}
+      <p className="text-sm text-[var(--text-2)]">{i18n.upload.dropHint}</p>
+      <button type="button" onClick={openPicker} className="btn-text text-[13px]">
+        {i18n.upload.choose}
       </button>
-      {children}
     </div>
   );
 }

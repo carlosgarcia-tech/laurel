@@ -1,4 +1,4 @@
-import type { CalcMode, EngineResult, Settings, TiebreakRule } from '../../core/types';
+import type { CalcMode, EngineResult, Settings } from '../../core/types';
 import { DEFAULT_KILL_POINTS, DEFAULT_POSITION_POINTS } from '../../core/engine/presets';
 import { i18n } from '../../i18n/es';
 
@@ -8,76 +8,50 @@ interface CalcModePanelProps {
   onChange: (patch: Partial<Settings>) => void;
 }
 
-const MODES: Array<{ value: CalcMode; needsTable: boolean }> = [
-  { value: 'standard', needsTable: false },
-  { value: 'position-kills', needsTable: true },
-  { value: 'kills-only', needsTable: false },
-  { value: 'custom', needsTable: true },
-];
+const MODES: CalcMode[] = ['standard', 'position-kills', 'kills-only', 'custom'];
 
-const TIEBREAK_OPTIONS: Array<{ value: TiebreakRule; label: string }> = [
-  { value: 'kills', label: i18n.mode.kills },
-  { value: 'best-rank', label: i18n.mode['best-rank'] },
-  { value: 'booyahs', label: i18n.mode.booyahs },
-];
-
-/** Paso 3: modo de cálculo + desempate + tabla editable (standard por defecto). */
+/**
+ * Cálculo (§5.4): lista de radios sin cajas — barra vertical de 2 px de acento
+ * en la seleccionada. `Personalizado` abre su tabla debajo, sangrada.
+ * El desempate (§5.5) vive en su propio paso, manejado por TiebreakList.
+ */
 export function CalcModePanel({ settings, engineResult, onChange }: CalcModePanelProps) {
-  const current = MODES.find((m) => m.value === settings.mode) ?? MODES[0];
-  const showTable =
-    settings.mode === 'custom' || (settings.mode === 'position-kills' && current?.needsTable);
+  const showTable = settings.mode === 'custom' || settings.mode === 'position-kills';
 
   return (
-    <div className="space-y-4">
-      <fieldset className="space-y-2">
-        <legend className="sr-only">{i18n.steps.mode}</legend>
-        {MODES.map(({ value }) => (
-          <label
-            key={value}
-            htmlFor={`calc-mode-${value}`}
-            className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 has-[:checked]:border-[var(--accent)]"
-          >
-            <input
-              id={`calc-mode-${value}`}
-              type="radio"
-              name="calc-mode"
-              value={value}
-              checked={settings.mode === value}
-              onChange={() => onChange({ mode: value })}
-              className="mt-1 accent-[var(--accent)]"
-            />
-            <span>
-              <span className="block text-sm font-medium">{i18n.mode[value]}</span>
-              <span className="block text-xs text-[var(--text-2)]">
-                {i18n.mode[`${value}Desc` as keyof typeof i18n.mode] as string}
-              </span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
-
+    <div>
       <fieldset>
-        <legend className="mb-1 text-xs font-medium text-[var(--text-2)]">
-          {i18n.mode.tiebreakTitle}
-        </legend>
-        <p className="mb-2 text-[11px] text-[var(--muted)]">{i18n.mode.tiebreakNote}</p>
-        <div className="flex flex-wrap gap-3">
-          {TIEBREAK_OPTIONS.map(({ value, label }) => {
-            const checked = settings.tiebreak.includes(value);
+        <legend className="sr-only">{i18n.sections.mode}</legend>
+        <div role="radiogroup" aria-label={i18n.sections.mode}>
+          {MODES.map((value) => {
+            const selected = settings.mode === value;
             return (
-              <label key={value} className="flex items-center gap-2 text-xs">
+              <label
+                key={value}
+                className={`flex min-h-[52px] cursor-pointer items-start gap-3 border-l-2 py-2.5 pl-3 transition-colors ${
+                  selected
+                    ? 'border-[var(--accent)]'
+                    : 'border-transparent hover:border-[var(--line-strong)]'
+                }`}
+              >
                 <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(e) => {
-                    const next = e.target.checked
-                      ? [...settings.tiebreak, value]
-                      : settings.tiebreak.filter((rule) => rule !== value);
-                    onChange({ tiebreak: next });
-                  }}
-                  className="accent-[var(--accent)]"
+                  type="radio"
+                  name="calc-mode"
+                  value={value}
+                  checked={selected}
+                  onChange={() => onChange({ mode: value })}
+                  className="mt-0.5"
                 />
-                {label}
+                <span className="min-w-0">
+                  <span
+                    className={`block text-sm font-medium ${selected ? 'text-[var(--text)]' : 'text-[var(--text-2)]'}`}
+                  >
+                    {i18n.mode[value]}
+                  </span>
+                  <span className="block text-[13px] text-[var(--text-3)]">
+                    {i18n.mode[`${value}Desc` as keyof typeof i18n.mode] as string}
+                  </span>
+                </span>
               </label>
             );
           })}
@@ -85,12 +59,12 @@ export function CalcModePanel({ settings, engineResult, onChange }: CalcModePane
       </fieldset>
 
       {showTable && (
-        <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+        <div className="fade-content mt-3 ml-5 flex flex-col gap-3">
           <p className="text-xs font-medium text-[var(--text-2)]">{i18n.mode.positionTable}</p>
           <div className="grid grid-cols-5 gap-2">
             {settings.positionPoints.map((points, index) => (
-              <label key={index} className="flex flex-col items-center gap-0.5">
-                <span className="text-[10px] text-[var(--muted)]">{index + 1}</span>
+              <label key={index} className="flex flex-col items-center gap-1">
+                <span className="mono text-[11px] text-[var(--text-3)]">{index + 1}</span>
                 <input
                   type="number"
                   min={0}
@@ -103,14 +77,14 @@ export function CalcModePanel({ settings, engineResult, onChange }: CalcModePane
                     next[index] = value;
                     onChange({ positionPoints: next });
                   }}
-                  className="w-full rounded-md border border-[var(--border-strong)] bg-[var(--surface-2)] px-1 py-1 text-center text-sm"
+                  className="field px-1 text-center"
                   aria-label={`${i18n.mode.positionTable} — posición ${index + 1}`}
                 />
               </label>
             ))}
           </div>
-          <label className="flex items-center justify-between gap-2 text-xs">
-            <span className="text-[var(--text-2)]">{i18n.mode.killPoints}</span>
+          <label className="flex items-center justify-between gap-2">
+            <span className="text-[13px] text-[var(--text-2)]">{i18n.mode.killPoints}</span>
             <input
               type="number"
               min={0}
@@ -123,7 +97,7 @@ export function CalcModePanel({ settings, engineResult, onChange }: CalcModePane
                   killPoints: Number.isNaN(value) || value < 0 ? DEFAULT_KILL_POINTS : value,
                 });
               }}
-              className="w-16 rounded-md border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1 text-center"
+              className="field w-16 px-2 text-center"
               aria-label={i18n.mode.killPoints}
             />
           </label>
@@ -131,25 +105,25 @@ export function CalcModePanel({ settings, engineResult, onChange }: CalcModePane
       )}
 
       {engineResult && engineResult.similarTeams.length > 0 && (
-        <div
-          role="status"
-          className="rounded-lg border border-[var(--gold)] bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] p-3 text-xs text-[var(--text-2)]"
-        >
-          <p className="font-medium text-[var(--gold)]">{i18n.mode.similarTeamsTitle}</p>
+        <div role="status" className="mt-3 border-l-2 border-[var(--danger)] pl-3">
+          <p className="text-[13px] font-medium text-[var(--danger)]">
+            {i18n.mode.similarTeamsTitle}
+          </p>
           {engineResult.similarTeams.map(([a, b], index) => (
-            <p key={index} className="mt-0.5">
-              {`· ${a} ↔ ${b}`}
+            <p key={index} className="mono mt-0.5 text-[12px] text-[var(--text-2)]">
+              {`${a} ↔ ${b}`}
             </p>
           ))}
-          <p className="mt-1 text-[11px] text-[var(--muted)]">{i18n.mode.similarTeamsNote}</p>
+          <p className="mt-1 text-[12px] text-[var(--text-3)]">{i18n.mode.similarTeamsNote}</p>
         </div>
       )}
+
       <button
         type="button"
         className="sr-only"
         onClick={() => onChange({ positionPoints: [...DEFAULT_POSITION_POINTS] })}
       >
-        Restablecer tabla por defecto
+        {i18n.mode.resetTable}
       </button>
     </div>
   );

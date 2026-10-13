@@ -1,6 +1,19 @@
 /* Fuentes autoalojadas vía @fontsource: sin CDNs ni llamadas de red externas.
-   Solo el par P1 va en el bundle inicial (TEMPLATESv2 §6); los pares P2–P10
-   se cargan con import() dinámico al seleccionar la plantilla (fonts.ts). */
+   UI (bundle inicial): Schibsted Grotesk + IBM Plex Mono (UI-REDESIGN §3.2).
+   Par P1 de las plantillas (Syne + Space Grotesk) también va en el bundle
+   inicial porque es el default de la preview; P2–P13 se cargan con
+   import() dinámico al seleccionar la plantilla (fonts.ts). */
+
+@import '@fontsource/schibsted-grotesk/latin-400.css';
+@import '@fontsource/schibsted-grotesk/latin-500.css';
+@import '@fontsource/schibsted-grotesk/latin-700.css';
+@import '@fontsource/schibsted-grotesk/latin-ext-400.css';
+@import '@fontsource/schibsted-grotesk/latin-ext-500.css';
+@import '@fontsource/schibsted-grotesk/latin-ext-700.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/ibm-plex-mono/latin-ext-400.css';
+@import '@fontsource/ibm-plex-mono/latin-ext-500.css';
 
 @import '@fontsource/syne/latin-700.css';
 @import '@fontsource/syne/latin-800.css';
