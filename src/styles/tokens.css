@@ -1,0 +1,25 @@
+:root {
+  /* Superficies */
+  --bg: #07100e;
+  --surface: #0e1a17;
+  --surface-2: #12241f;
+  --row-alt: #0b1613;
+  --border: #1f3a33;
+  --border-strong: #2a4a42;
+  --track: #16302a;
+
+  /* Texto */
+  --text: #f4efe6;
+  --text-2: #b9cbc4;
+  --muted: #8fa8a0;
+
+  /* Acentos (configurables por el usuario en el editor) */
+  --accent: #34d399;
+  --gold: #e8c27a;
+  --silver: #b8c4c0;
+  --bronze: #c98b5a;
+
+  /* Tipografía */
+  --font-display: 'Syne', system-ui, sans-serif;
+  --font-body: 'Space Grotesk', system-ui, 'Noto Sans', 'Segoe UI Symbol', sans-serif;
+}

@@ -1,0 +1,11 @@
+/* Fuentes autoalojadas vía @fontsource: sin CDNs ni llamadas de red externas.
+   Subsets latin y latin-ext únicamente; font-display: swap (defecto de fontsource). */
+
+@import '@fontsource/syne/latin-700.css';
+@import '@fontsource/syne/latin-800.css';
+@import '@fontsource/space-grotesk/latin-400.css';
+@import '@fontsource/space-grotesk/latin-500.css';
+@import '@fontsource/space-grotesk/latin-700.css';
+@import '@fontsource/space-grotesk/latin-ext-400.css';
+@import '@fontsource/space-grotesk/latin-ext-500.css';
+@import '@fontsource/space-grotesk/latin-ext-700.css';
