@@ -193,3 +193,201 @@ Corona). Se eliminaron **Gaceta, Marcador y Recibo** con todo su código, estilo
 - `npm run contact-sheet` (página multi-entry de Vite, `contact-sheet.html`) renderiza las 10
   plantillas con el log de muestra en 4:5. La verificación visual («misma familia» vs «solo
   cambio de color») queda al ojo del dueño: en este entorno no hay navegador para capturar.
+
+## Ronda AJUSTES.md 1 — solo plantillas (P0.1 + P1.1 + P1.2)
+
+### Overrides de estilo por plantilla, sin globales (P0.1)
+
+- Se eliminaron los campos GLOBALES `accentColor`, `textColor` y `fontFamily` de `Settings`:
+  eran la causa de que "Selva" pintara con el acento esmeralda de Corona. El estilo del
+  usuario vive únicamente en `styleByTemplate[templateId]`; sin override manda el token/par
+  de `templates.ts`. `StylePanel` muestra el valor efectivo (override > token) pero solo
+  escribe un override cuando el usuario mueve el control.
+- `SCHEMA_VERSION = 4`. La migración v3→v4 mueve lo que había en los campos globales a un
+  override de **la plantilla que estaba activa al guardar** (lo que el usuario realmente
+  veía), sin copiarlo al resto; si coincidía con los defaults v3 no se crea override.
+- Al cambiar de plantilla se carga su `fontPairId` por defecto (o el override propio) y se
+  actualizan las CSS vars `--font-display`/`--font-body` del editor; la exportación ya
+  esperaba `document.fonts.ready`.
+
+### selva → arena y pista a clara (P1.2)
+
+- `selva` se renombró a `arena` con identidad CLARA (arena/terracota/teal, tokens de
+  AJUSTES.md) y `migrateTemplateId()` traduce el id viejo en storage e importación JSON.
+- `pista` pasó a clara (concreto + naranja `#e8590c`). Resultado: 4 claras (Marfil, Hielo,
+  Arena, Pista) y 6 oscuras con tonos distintos. El acento de Pista da ~2.9:1 contra su bg
+  (el spec fija esos hexes); la lectura de chips/barras es ≥ 4.5:1 vía `readableOn` (texto
+  oscuro sobre el naranja), que es el par que realmente se lee.
+
+### Galería (P1.1)
+
+- `Picker` pasó a `role="radiogroup"` con cuadrícula de 2 columnas, miniaturas reales a escala
+  ≥ ~200 px (ResizeObserver + carga perezosa con IntersectionObserver), marca de selección
+  visible (✓ + borde accent), flechas/Home/End, y etiquetas en español vía `i18n.picker`
+  (`Oscura · Podio en fila · Barras`). El estado de selección vive en props (antes había un
+  `useState` local que se desincronizaba al importar un JSON). La columna izquierda del editor
+  se amplió a 460 px para que las miniaturas alcancen el ancho mínimo.
+
+## Ronda de motion (skills improve-animations / review-animations)
+
+- Auditoría con la skill `improve-animations` (barra de Emil Kowalski) sobre `8a07b83`; los
+  planes viven en `plans/` (001–004, todos ejecutados). Scope: SOLO el chrome del editor —
+  la imagen exportada sigue siendo un PNG estático y no lleva motion (el fade de preview vive
+  en el contenedor externo de `TemplateFrame`, nunca en el nodo exportable).
+- Tokens nuevos en `tokens.css`: `--ease-out: cubic-bezier(0.23,1,0.32,1)` e `--ease-in-out`.
+  Clases globales en `app.css`: `.pressable` (scale 0.97 / 160 ms), `.notice` (entrada 150 ms
+  y salida con fade), `.preview-fade` (180 ms), `.file-row-enter` (150 ms); todas con rama
+  `prefers-reduced-motion` que quita movimiento y conserva opacidad.
+- Avisos de estado: «PNG descargado» se auto-oculta a los 4 s con fade (AJUSTES.md P0.2) y
+  `patch()` limpia el estado pegajoso.
+- Candidatos rechazados por restricción: hover-scale en tarjetas de plantilla, stagger de
+  pasos al cargar, motion en el radio de formato (alta frecuencia → instantáneo). Detalle en
+  `plans/README.md`.
+
+## Ronda TEMPLATES-FREEFIRE.md — 3 plantillas FF + movimiento del editor
+
+Spec: `TEMPLATES-FREEFIRE.md` (extensión de TEMPLATESv2; FF gana en movimiento,
+v2 gana en visuales de la imagen exportada).
+
+### Catálogo y tipos
+
+- 3 plantillas nuevas como **variantes de Corona** (solo objetos en `templates.ts`):
+  `booyah` (§3.1), `zona-roja` (§3.2) y `kalahari` (§3.2), con `category: 'free-fire'`
+  y tokens/variantes copiados tal cual de la spec. Las 10 v2 llevan `category: 'general'`.
+- `DecorV += 'chevrons' | 'zone'` implementadas en `Decor.tsx` con la geometría exacta
+  de §4 (chevrons: 3 polígonos 22 px, opacidades .9/.55/.3, esquina superior derecha;
+  zone: anillos r160/300/460 —medio dashed—, cruceta 40 px, punto 6 px `accent2`,
+  anclaje 180/200 px, `strokeLinecap` según `config.radius`).
+- P11–P13 en `fonts.ts` con `import()` perezoso (latin + latin-ext). Paquetes nuevos:
+  `big-shoulders-display`, `saira-extra-condensed`, `saira`, `alfa-slab-one`,
+  `barlow-semi-condensed` @5.3.0.
+- `big-shoulders-display` **no** publica la clave `"./*.css"` en `exports` (solo `"./*"`),
+  así que sus 4 imports van **sin extensión** (`@fontsource/big-shoulders-display/latin-800`);
+  se declaró `declare module '@fontsource/big-shoulders-display/*'` en `vite-env.d.ts`.
+
+### Sello BOOYAH, scrim y fondo por defecto
+
+- Sello: `config.id === 'booyah' && position === 1 && row.booyahs > 0`; texto
+  `Booyah ×N` con `textTransform: 'uppercase'` (el pie usa `Booyah × N` con espacio —
+  el test los distingue con `/Booyah ×\d/`).
+- Scrim del logo/fondo horneado con el **bg de la plantilla** (`hexToRgb(template.tokens.bg)`),
+  no con el hardcode de Corona; así Booyah/Zona Roja tiñen oscuro y Kalahari claro (§7).
+- Fondo por defecto solo en templates **oscuros** (`theme === 'dark'`); las claras van con
+  color plano `bg` + decoración (v2 §7 y FF §7 para Kalahari).
+- El header `split` conserva las cifras compartidas (equipos/salas/kills/puntos); NO se
+  cambia a booyahs (v2 §7 manda en visuales de la imagen exportada).
+
+### Movimiento del editor (FF §6)
+
+- `app.css` reescrito con los valores de §6: press 120 ms, crossfade 140 ms, notice
+  200 ms desde 8 px (salida solo opacidad 120 ms), card `:active` 0.97, hover lift 2 px
+  solo fine-pointer, borde selección 160 ms, stagger 30 ms/máx. 10 con `translateY(8px)`,
+  tabs indicador `translateX` 200 ms, `podium-reveal` 220 ms con escalón 40 ms. Rama
+  reduced-motion conserva opacidad ≤ 120 ms.
+- `TemplateProps.reveal?: boolean` (default false): la galería y la hoja de contactos
+  renderizan estáticas; solo el preview de App pasa `reveal`. El estado vive en App y se
+  resetea (true → false a los 600 ms) al cambiar `settings.matchday`.
+- Crossfade de preview en dos capas (`SharedFrame`): capa fantasma con el contenido
+  anterior (160 ms) + capa nueva. Teclado (flechas/Home/End) marca `{instant: true}` →
+  `fade={false}` → sin crossfade (§6.2). El clic del ratón sí lo permite.
+- `.file-row-enter` eliminado de `app.css` (la tabla §6.2 es exhaustiva y no lo incluye;
+  la clase se quitó de `FileList.tsx`).
+
+### Aislamiento de exportación (FF §6.3)
+
+- `exportPng` marca `data-capture="true"` en el nodo, espera `document.fonts.ready`,
+  `img.decode()` y `getAnimations({subtree: true})` (guard `typeof`, fallback silencioso),
+  y quita el atributo en `finally`. Una regla CSS anula transiciones/animaciones dentro
+  del nodo capturado → el PNG es idéntico con o sin movimiento en el editor.
+
+### Galería (FF §7)
+
+- `Picker` con pestañas `role="tablist"` (Todas · General · Free Fire), `radiogroup`
+  filtrado, insignia de texto `FF` en las 3 plantillas, borde de selección por opacidad
+  (160 ms), radius externo de tarjeta `12 + config.radius * 0.4` (§6.4), stagger solo
+  en los primeros ~700 ms tras montar. Navegación por flechas/Home/End sobre la lista
+  **visible**; el foco se reaplica con `requestAnimationFrame`.
+- i18n: `picker.tabsLabel`, `picker.tabs {all, general, free-fire}`, `badge: 'FF'`.
+
+### Verificación
+
+- typecheck, eslint (`npx eslint src`), 118/118 tests y build en verde.
+- Tests nuevos/actualizados: catálogo 13 (tabla 5.1 + 3.1/3.2, category, 5 claras/8 oscuras,
+  font pairs p1–p13), render de las 13 + sello BOOYAH + reveal, picker con pestañas/FF/instant.
+- El warning «same key, 14» del render de filas es preexistente (existe en main).
+
+## Rediseño de UI (UI-REDESIGN.md — «Mesa de producción»)
+
+### Alcance y precedencia
+
+- La imagen exportada, `ResultImage`, `templates.ts` y el pipeline de exportación NO se
+  tocaron: siguen `TEMPLATESv2.md` + `TEMPLATES-FREEFIRE.md`. El rediseño es solo el
+  chrome del editor (tokens, layout, componentes, copy, motion del editor).
+- Skills de `skills/` leídas (resumen ejecutivo vía subagente): `redesign-existing-projects`,
+  `design-taste-frontend`, `minimalist-ui`, `high-end-visual-design`, `apple-design`,
+  `brandkit`, `emil-design-eng`+`animation-vocabulary`+`animation-performance`,
+  `break-ui`+`review-animations`, `full-output-enforcement`. NO se usaron `gpt-taste` ni
+  `stitch-design-taste` (fuera de la lista de §1).
+
+### Tokens y tipografía de UI
+
+- Nuevos tokens de chrome (§3.1) en `tokens.css`: `--bg:#141311`, `--stage:#0e0d0c`,
+  `--line`, `--line-strong`, `--text`, `--text-2`, `--text-3`, `--accent:#b9d77a`,
+  `--danger`, `--btn-primary-bg/-fg`, `--font-ui`, `--font-mono`, easings.
+- ELIMINADOS del chrome (solo se usaban en la UI vieja): `--surface`, `--surface-2`,
+  `--row-alt`, `--border`, `--border-strong`, `--track`, `--muted`, `--gold`, `--silver`,
+  `--bronze`, `--font-display`, `--font-body`. Las plantillas reciben colores/fuentes
+  por props, no por CSS vars de chrome.
+- `@fontsource/schibsted-grotesk` (UI) + IBM Plex Mono (números/metadatos) instalados;
+  Syne/Space Grotesk siguen en bundle inicial (par P1) y P2–P13 lazy.
+- `App.tsx` ya no hace `setProperty('--font-display'/'--font-body')`; solo `loadFontPair`.
+  `contact-sheet/main.tsx` usa `--font-ui` en su h1.
+
+### Layout y componentes
+
+- Barra superior 56 px: marca, título en vivo (`liveTitle`), «Borrar datos» con
+  confirmación inline de 4 s (sin `alert()`).
+- Columna izquierda 400 px con secciones colapsables 01–05 (`Section`: número mono +
+  título, filete 1 px, cerrada resume en una línea con «Editar»).
+- **05 Estilo** (decisión): UI-REDESIGN §4 solo dibuja 01–04, pero AGENTS.md exige
+  logo/fondo/fuente/color → se añade una 5.ª sección con el mismo patrón.
+- Columna derecha (`--stage`): escenario con la imagen lo más grande posible sin scroll
+  (`TemplateFrame` acepta `maxHeight` y centra con flex; escala = min(ancho, alto)),
+  etiqueta mono «EJEMPLO» cuando no hay salas, selector de formato con subrayado
+  (`underline-tab`, no `translateX`), botones hueso + resolución mono, tira de plantillas
+  siempre visible (escritorio) o bottom sheet (móvil < lg).
+- `Picker` reescrito como tira horizontal: miniaturas reales de 150 px (4:5), filete de
+  selección accent 2 px fuera (opacidad 160 ms), nombre 13/500 + mono 11 `claro`/`oscuro`
+  (sin descripciones largas), pestañas como texto con subrayado, scroll-snap, teclado
+  con cambio instantáneo. Roles/ids/instant conservados para tests.
+- `TiebreakList` (nuevo): desempate ordenable con toggles (settings.tiebreak = enabled
+  en orden), drag HTML5 desde el tirador `⋮⋮` (handlers en el botón, no en el li, por
+  a11y), botones ↑↓ visibles en focus/hover, `Alt+↑/↓` y `aria-live`.
+- `CalcModePanel`: radios sin cajas, barra vertical 2 px accent al seleccionar; tabla
+  Personalizado/Posición+Kills sangrada con fade; desempate ya NO vive aquí (paso 04).
+- `FileDropzone`: filete punteado 96 px / compacto «Añadir más»; `FileList`: filas mono
+  `archivo · N equipos · M kills` + quitar; avisos fuera del dropzone (ya no es wrapper
+  de children).
+- `ErrorBoundary` con tokens nuevos.
+
+### Copy (§6)
+
+- `i18n/es.ts` reescrito: sentence case, sin emojis/¡!/¡Listo!; secciones `{files,info,mode,tiebreak,style,edit}`; `upload.*`, `mode.*` (con `tiebreakNote/moveUp/moveDown/tiebreakOrder`), `picker.*` (`openSheet/closeSheet/theme{claro,oscuro}`), `privacy`, `liveTitle()`, `preview.*`. ELIMINADOS: `tagline`, `privacyBadge`, `steps.*`, `upload.{dropTitle,dropSubtitle,chooseButton,empty,killsValidados,advertencias}`, `form.dateHint`, `style.theme*`, `preview.{emptyTitle,emptyBody,help,selectFilesFirst}`.
+
+### Motion (§8)
+
+- `app.css` con: press 0.97, notice 200/120 ms, preview crossfade 140 ms, podium-reveal
+  220 ms, fade-content 120 ms (secciones), underline-tab (opacidad del filete 200 ms,
+  decisión: `border-bottom` con transición en vez de `translateX` compartido),
+  sheet-in 200 ms (bottom sheet móvil), strip-scroll (snap sin barra), reduced-motion
+  con opacidad ≤ 120 ms.
+
+### Verificación
+
+- typecheck, eslint (`npx eslint src`), prettier, 118/118 tests y build en verde.
+- Test actualizado: `template-style.test.tsx` captions del strip (nombre + `claro`/
+  `oscuro`; 8 oscuras / 5 claras — se corrigió el conteo: Marfil, Pista, Arena, Hielo y
+  Kalahari son claras).
+- `npm run lint` repo-wide sigue roto por `.agents/` y `AJUSTES.md` (preexistente en
+  main); usar comandos scoped.
+- Warning preexistente «same key, 14» en main (no introducido por el rediseño).

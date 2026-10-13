@@ -6,11 +6,12 @@ Generador de imágenes de resultados de torneos: carga los logs de tus partidas 
 
 ## Estado
 
-- ✅ **Fase 1 — Núcleo:** parser del formato de resultados y motor de cálculo (estándar, posición+kills, solo kills, personalizado), desempates configurables, MVP, booyahs y acumulación multi-sala. Cubierto con 41 tests.
-- 🔜 Fase 2 — Editor y vista previa en vivo.
-- 🔜 Fase 3 — Estilo personalizable y exportación PNG.
-- 🔜 Fase 4 — Persistencia, plantillas y extra de robustez.
-- 🔜 Fase 5 — Accesibilidad final, Lighthouse y despliegue.
+- ✅ **Fase 1 — Núcleo:** parser del formato de resultados y motor de cálculo (estándar, posición+kills, solo kills, personalizado), desempates configurables, MVP, booyahs y acumulación multi-sala.
+- ✅ **Fase 2 — Editor y vista previa en vivo.**
+- ✅ **Fase 3 — Estilo personalizable y exportación PNG** (2x, copiar al portapapeles, formatos 4:5 / 9:16 / 1:1).
+- ✅ **Fase 4 — Persistencia, plantillas y extras** (IndexedDB + localStorage, plantillas JSON, 13 plantillas TEMPLATESv2 + Free Fire, multi-sala).
+- ✅ **Rediseño de UI** («Mesa de producción»): chrome del editor sin tarjetas, filetes 1 px, neutro cálido, Schibsted Grotesk + IBM Plex Mono, tira de plantillas, copy sentence case. La imagen exportada no cambió.
+- ✅ **Despliegue:** workflow de GitHub Pages y Vercel listos (mismo build, `VITE_BASE`).
 
 ## Cómo correrlo
 
@@ -55,33 +56,37 @@ Desempates configurables (aplicados tras ordenar por total descendente): más ki
 ## Limitaciones conocidas
 
 - El fixture de tests (`tests/fixtures/MatchResult_example_log.txt`) es una reconstrucción sintética a partir de los datos verificados del spec; se reemplazará por el log real del dueño cuando esté disponible.
-- En Safari la primera exportación PNG puede salir sin imágenes/fuentes: se mitigará en fase 3 con una exportación de calentamiento (se documentará aquí).
-- La interfaz del editor llega en la fase 2; por ahora la app muestra un placeholder informativo.
+- En Safari la primera exportación PNG puede salir sin imágenes/fuentes: se mitiga con espera de `document.fonts.ready` + `img.decode()` + `getAnimations()`, pero puede requerir un reintento en algunos casos.
 
-## Plantillas (sistema TEMPLATESv2)
+## Plantillas (sistema TEMPLATESv2 + Free Fire)
 
-Una sola estructura (la de **Corona**) con 10 variantes: cambian colores, tipografía,
+Una sola estructura (la de **Corona**) con 13 variantes: cambian colores, tipografía,
 posiciones y formatos, pero todas mantienen los mismos bloques (cabecera + píldoras,
-podio, lista 4+, MVP y pie).
+podio, lista 4+, MVP y pie). La galería tiene pestañas **Todas · General · Free Fire**.
 
-| Plantilla                | Tema   | Rasgos                                                       |
-| ------------------------ | ------ | ------------------------------------------------------------ |
-| **Corona** (por defecto) | oscura | esmeralda/dorado, podio escalonado, barras, anillos          |
-| **Brasa**                | oscura | rojo-naranja, banner, MVP arriba, diagonales, ángulos rectos |
-| **Medianoche**           | oscura | azul profundo, todo centrado, MVP en franja, arcos           |
-| **Marfil**               | clara  | marfil + verde bosque, podio héroe, puntos guía, `1.º`       |
-| **Pista**                | oscura | grafito/naranja, cifras grandes, chips de posición, rayas    |
-| **Granate**              | oscura | vino/champán, centrada, anillos finos, serif                 |
-| **Cobalto**              | oscura | banner amarillo, podio en fila, MVP arriba, ángulos rectos   |
-| **Selva**                | oscura | verdes/cobre, podio héroe, chips, retícula de puntos         |
-| **Hielo**                | clara  | azul acero/ámbar, cuadrícula, numeración `#4`                |
-| **Ámbar**                | oscura | negro/ámbar, `scan` de pantalla, cifras en mono              |
+| Plantilla                | Catálogo    | Tema   | Rasgos                                                          |
+| ------------------------ | ----------- | ------ | --------------------------------------------------------------- |
+| **Corona** (por defecto) | general     | oscura | esmeralda/dorado, podio escalonado, barras, anillos             |
+| **Brasa**                | general     | oscura | rojo-naranja, banner, MVP arriba, diagonales, ángulos rectos    |
+| **Medianoche**           | general     | oscura | azul profundo, todo centrado, MVP en franja, arcos              |
+| **Marfil**               | general     | clara  | marfil + verde bosque, podio héroe, puntos guía, `1.º`          |
+| **Pista**                | general     | clara  | concreto claro/naranja, cifras grandes, chips, rayas            |
+| **Granate**              | general     | oscura | vino/champán, centrada, anillos finos, serif                    |
+| **Cobalto**              | general     | oscura | banner amarillo, podio en fila, MVP arriba, ángulos rectos      |
+| **Arena**                | general     | clara  | arena/terracota, podio héroe, chips, retícula de puntos         |
+| **Hielo**                | general     | clara  | azul acero/ámbar, cuadrícula, numeración `#4`                   |
+| **Ámbar**                | general     | oscura | negro/ámbar, `scan` de pantalla, cifras en mono                 |
+| **Booyah**               | Free Fire   | oscura | negro cálido/naranja-ámbar, banner, podio héroe, chevrons       |
+| **Zona Roja**            | Free Fire   | oscura | rojo/ámbar, podio en fila, anillos de zona, barras              |
+| **Kalahari**             | Free Fire   | clara  | arena/tierra cocida/verde azulado, centrada, podio escalonado   |
 
-En todas: par de fuentes editable (10 pares autoalojados, carga perezosa), color de
-acento, color de texto, logo y fondo propio (scrim horneado según el tema). Los overrides
-se guardan por plantilla (`styleByTemplate`). Contraste mínimo verificado ≥ 4.5:1.
+En todas: par de fuentes editable (13 pares autoalojados, carga perezosa), color de
+acento, color de texto, logo y fondo propio (scrim horneado con el bg de la plantilla;
+las claras van con color plano + decoración si no hay fondo). Los overrides se guardan
+por plantilla (`styleByTemplate`). Contraste mínimo verificado ≥ 4.5:1. Las 3 plantillas
+Free Fire no usan ningún activo oficial de Garena.
 
-**Hoja de contactos:** `npm run contact-sheet` muestra las 10 plantillas lado a lado
+**Hoja de contactos:** `npm run contact-sheet` muestra las 13 plantillas lado a lado
 (local Vite page, `contact-sheet.html`).
 
 ## Despliegue (GitHub Pages y Vercel)
