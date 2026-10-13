@@ -64,6 +64,9 @@ function App() {
   const confirmTimer = useRef<number | undefined>(undefined);
   // Bottom sheet de plantillas (móvil, §4.1).
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Tira de plantillas plegable en desktop: cerrada por defecto para que el
+  // preview ocupe el alto disponible (el usuario la abre bajo demanda).
+  const [stripOpen, setStripOpen] = useState(false);
   // Ref al nodo exportable: se lee al momento del clic de exportar.
   const exportNodeRef = useRef<HTMLDivElement | null>(null);
 
@@ -538,13 +541,33 @@ function App() {
             </div>
           </div>
 
-          {/* Tira de plantillas (§5.6): siempre visible en escritorio. */}
-          <div className="hidden shrink-0 border-t border-[var(--line)] bg-[var(--bg)] px-4 py-3 lg:block lg:px-5">
-            {pickerNode}
+          {/* Plantillas en desktop: tira plegable bajo demanda (no come alto del preview). */}
+          <div className="hidden shrink-0 border-t border-[var(--line)] bg-[var(--bg)] lg:block">
+            {stripOpen && (
+              <div className="fade-content border-b border-[var(--line)] px-5 py-3">
+                {pickerNode}
+              </div>
+            )}
+            <div className="flex items-center justify-between px-5 py-2">
+              <button
+                type="button"
+                aria-expanded={stripOpen}
+                onClick={() => setStripOpen((v) => !v)}
+                className="btn-text text-[13px]"
+              >
+                {`${i18n.picker.groupLabel}: ${template.name}`}
+                <span aria-hidden="true" className="ml-1.5 text-[var(--text-3)]">
+                  {stripOpen ? '▾' : '▴'}
+                </span>
+              </button>
+              <span className="mono text-[11px] text-[var(--text-3)]">
+                {`${template.category === 'free-fire' ? `${i18n.picker.badge} · ` : ''}${i18n.picker.theme[template.theme]}`}
+              </span>
+            </div>
           </div>
 
           {/* Móvil (§4.1): acceso a plantillas vía bottom sheet. */}
-          <div className="shrink-0 border-t border-[var(--line)] px-4 py-3 lg:hidden">
+          <div className="shrink-0 border-t border-[var(--line)] px-4 py-2.5 lg:hidden">
             <button
               type="button"
               className="btn btn-secondary w-full"
@@ -584,8 +607,8 @@ function App() {
       </main>
 
       {/* Pie (§4): privacidad, sin badge. */}
-      <footer className="shrink-0 border-t border-[var(--line)] px-5 py-3">
-        <p className="text-[12px] text-[var(--text-3)]">{i18n.privacy}</p>
+      <footer className="shrink-0 border-t border-[var(--line)] px-5 py-1.5">
+        <p className="text-[11px] text-[var(--text-3)]">{i18n.privacy}</p>
       </footer>
     </div>
   );
