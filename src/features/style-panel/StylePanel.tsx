@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
-import type { Settings, ThemePreset } from '../../core/types';
-import { THEMES } from '../../core/style/themes';
+import type { Settings } from '../../core/types';
+import { FONT_PAIRS, getFontPair } from '../templates/fonts';
+import type { TemplateConfig } from '../templates/types';
 import { i18n } from '../../i18n/es';
 import { contrastRatio } from '../../utils/color';
 import { isAcceptedImage, MAX_INPUT_IMAGE_BYTES, resizeImage } from '../../utils/imageResize';
@@ -9,33 +10,28 @@ import type { StoredImageController } from './useStoredImage';
 interface StylePanelProps {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
-  /** Únila fuente de estado en App: el preview y la descarga se alimentan de aquí. */
+  config: TemplateConfig;
   logo: StoredImageController;
   background: StoredImageController;
+  onExportTemplate: () => void;
+  onImportTemplate: (file: File) => void;
 }
 
-const FONTS: Array<{ value: Settings['fontFamily']; label: string }> = [
-  { value: 'Syne', label: 'Syne' },
-  { value: 'Oxanium', label: 'Oxanium' },
-  { value: 'Space Grotesk', label: 'Space Grotesk' },
-  { value: 'Rubik', label: 'Rubik' },
-  { value: 'Archivo', label: 'Archivo' },
-  { value: 'Sora', label: 'Sora' },
-];
-
-const THEME_LABEL_KEYS: Record<ThemePreset, keyof typeof i18n.style> = {
-  laurel: 'themeDefault',
-  corona: 'themeCorona',
-  neon: 'themeNeon',
-  acero: 'themeAcero',
-};
-
-/** Paso 4: tema, logo, fondo, tipo de fuente y colores. */
-export function StylePanel({ settings, onChange, logo, background }: StylePanelProps) {
+/** Paso 5: personalización (§7): fuente, colores, logo y fondo — en todas las plantillas. */
+export function StylePanel({
+  settings,
+  onChange,
+  config,
+  logo,
+  background,
+  onExportTemplate,
+  onImportTemplate,
+}: StylePanelProps) {
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const noticeTimer = useRef<number | undefined>(undefined);
 
-  const contrast = contrastRatio(settings.textColor, '#07100e');
+  // El contraste del texto se mide contra el bg declarado de la plantilla.
+  const contrast = contrastRatio(settings.textColor, config.tokens.bg);
   const lowContrast = contrast !== undefined && contrast < 4.5;
 
   async function pickImage(key: 'logo' | 'background', file: File): Promise<void> {
@@ -51,7 +47,6 @@ export function StylePanel({ settings, onChange, logo, background }: StylePanelP
     }
     const controller = key === 'logo' ? logo : background;
     try {
-      // Preview instantáneo con el archivo original mientras se optimiza en caliente.
       const dataUrl = await fileToDataUrl(file);
       controller.show(dataUrl);
       const maxSide = key === 'logo' ? 512 : 2160;
@@ -144,47 +139,7 @@ export function StylePanel({ settings, onChange, logo, background }: StylePanelP
   }
 
   return (
-    <div className="space-y-3">
-      {/* Presets de estilo de diseño */}
-      <fieldset>
-        <legend className="mb-1 text-xs font-medium text-[var(--text-2)]">
-          {i18n.style.theme}
-        </legend>
-        <div className="grid grid-cols-2 gap-2">
-          {THEMES.map((theme) => (
-            <label
-              key={theme.id}
-              htmlFor={`theme-${theme.id}`}
-              className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-2 has-[:checked]:border-[var(--accent)]"
-            >
-              <input
-                id={`theme-${theme.id}`}
-                type="radio"
-                name="theme-preset"
-                className="sr-only"
-                checked={settings.theme === theme.id}
-                onChange={() =>
-                  onChange({
-                    theme: theme.id,
-                    accentColor: theme.accentColor,
-                    textColor: theme.textColor,
-                  })
-                }
-              />
-              <span
-                aria-hidden="true"
-                className="h-4 w-4 shrink-0 rounded-full border border-[var(--border-strong)]"
-                style={{ background: theme.accentColor }}
-              />
-              <span className="text-xs">
-                {i18n.style[THEME_LABEL_KEYS[theme.id]] as string}
-                <span className="block text-[10px] text-[var(--muted)]">{theme.description}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
+    <div className="flex flex-col gap-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <ImageField
           id="pick-logo"
@@ -231,34 +186,36 @@ export function StylePanel({ settings, onChange, logo, background }: StylePanelP
           onChange={(e) => onChange({ fontFamily: e.target.value as Settings['fontFamily'] })}
           className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
         >
-          {FONTS.map((font) => (
-            <option key={font.value} value={font.value}>
-              {font.label}
+          {FONT_PAIRS.map((pair) => (
+            <option key={pair.id} value={pair.id}>
+              {pair.label}
             </option>
           ))}
         </select>
+        <span className="text-[10px] text-[var(--muted)]">
+          {`${i18n.style.fontHintPeso} ${getFontPair(settings.fontFamily).displayWeights}`}
+        </span>
       </label>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-xs font-medium text-[var(--text-2)]">
-          {i18n.style.textColor}
-          <input
-            type="color"
-            value={settings.textColor}
-            onChange={(e) => onChange({ textColor: e.target.value })}
-            aria-label={i18n.style.textColor}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-[var(--text-2)]">
-          {i18n.style.accentColor}
-          <input
-            type="color"
-            value={settings.accentColor}
-            onChange={(e) => onChange({ accentColor: e.target.value })}
-            aria-label={i18n.style.accentColor}
-          />
-        </label>
-      </div>
+      <label className="flex flex-col gap-1 text-xs font-medium text-[var(--text-2)]">
+        {i18n.style.accentColor}
+        <input
+          type="color"
+          value={settings.accentColor}
+          onChange={(e) => onChange({ accentColor: e.target.value })}
+          aria-label={i18n.style.accentColor}
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs font-medium text-[var(--text-2)]">
+        {i18n.style.textColor}
+        <input
+          type="color"
+          value={settings.textColor}
+          onChange={(e) => onChange({ textColor: e.target.value })}
+          aria-label={i18n.style.textColor}
+        />
+      </label>
 
       {lowContrast && (
         <p
@@ -276,11 +233,38 @@ export function StylePanel({ settings, onChange, logo, background }: StylePanelP
           {notice}
         </p>
       )}
+
+      {/* Plantilla JSON: ajustes + imágenes embebidas */}
+      <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
+        <input
+          id="plantilla-import"
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onImportTemplate(file);
+            e.target.value = '';
+          }}
+        />
+        <button
+          type="button"
+          onClick={onExportTemplate}
+          className="rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs text-[var(--text-2)] hover:border-[var(--accent)] hover:text-[var(--text)]"
+        >
+          {i18n.style.exportTemplate}
+        </button>
+        <label
+          htmlFor="plantilla-import"
+          className="cursor-pointer rounded-md border border-[var(--border-strong)] px-2 py-1 text-xs text-[var(--text-2)] hover:border-[var(--accent)] hover:text-[var(--text)]"
+        >
+          {i18n.style.importTemplate}
+        </label>
+      </div>
     </div>
   );
 }
 
-/** Data URL directa del archivo original para el preview sin esperar la optimización. */
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

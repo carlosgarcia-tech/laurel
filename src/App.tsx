@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { computeStandings } from './core/engine/calculate';
+import { parseLog } from './core/parser/parseLog';
+import { buildViewModel } from './core/viewmodel/buildViewModel';
 import type { Settings } from './core/types';
 import { i18n } from './i18n/es';
 import { clearStoredImages } from './storage/images';
@@ -9,18 +11,24 @@ import {
   loadSettings,
   saveSettings,
 } from './storage/persist';
+import { processImage } from './features/assets/processImage';
 import { CalcModePanel } from './features/calc-mode/CalcModePanel';
 import { copyPngToClipboard } from './features/export/copyToClipboard';
 import { downloadPng, exportPng, slugifyFileName } from './features/export/exportPng';
 import { FileDropzone } from './features/upload/FileDropzone';
 import { FileList } from './features/upload/FileList';
 import { useUploadedRooms } from './features/upload/useUploadedRooms';
-import { PreviewFrame } from './features/preview/PreviewFrame';
-import { ResultImage, CANVAS_SIZES, CANVAS_WIDTH } from './features/preview/ResultImage';
 import { StylePanel } from './features/style-panel/StylePanel';
 import { useStoredImage } from './features/style-panel/useStoredImage';
 import { useDefaultAssets } from './features/style-panel/useDefaultAssets';
 import { TournamentForm } from './features/tournament-form/TournamentForm';
+import { Picker } from './features/templates/picker/Picker';
+import { TemplateFrame } from './features/templates/SharedFrame';
+import { ResultImage } from './features/templates/ResultImage';
+import { getTemplate, heightForFormat } from './features/templates/templates';
+import { loadFontPair } from './features/templates/fonts';
+import { parseTemplate, serializeTemplate, downloadJson } from './features/templates/plantillaIo';
+import sampleLogText from './assets/sample_log.txt?raw';
 
 interface StepCardProps {
   number: number;
@@ -45,6 +53,7 @@ function StepCard({ number, title, children }: StepCardProps) {
   );
 }
 
+const CANVAS_WIDTH = 1080;
 const FORMATS: Array<Settings['format']> = ['4:5', '9:16', '1:1'];
 
 function App() {
@@ -53,8 +62,13 @@ function App() {
   const logo = useStoredImage('logo');
   const background = useStoredImage('background');
   const defaultAssets = useDefaultAssets();
+  const [processedAssets, setProcessedAssets] = useState<{ logo?: string; background?: string }>(
+    {},
+  );
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'ok' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
+
+  const template = getTemplate(settings.templateId);
 
   const patch = useCallback((values: Partial<Settings>) => {
     setSettings((current) => ({ ...current, ...values }));
@@ -64,6 +78,15 @@ function App() {
     const timer = window.setTimeout(() => saveSettings(settings), 200);
     return () => window.clearTimeout(timer);
   }, [settings]);
+
+  // Fuentes del par activo (perezoso, una vez por par).
+  const activeFontPairId = useMemo(() => {
+    const overrides = settings.styleByTemplate[template.id];
+    return overrides?.fontPairId ?? settings.fontFamily;
+  }, [settings.styleByTemplate, settings.fontFamily, template.id]);
+  useEffect(() => {
+    loadFontPair(activeFontPairId);
+  }, [activeFontPairId]);
 
   const engineResult = useMemo(() => {
     if (rooms.length === 0) return undefined;
@@ -78,14 +101,92 @@ function App() {
     );
   }, [rooms, settings.mode, settings.positionPoints, settings.killPoints, settings.tiebreak]);
 
-  // Logo/fondo efectivos: imagen del usuario > por defecto del proyecto (si el toggle lo permite).
-  const effectiveLogoUrl =
+  // VM real si hay datos; VM de ejemplo (fixture) para explorar plantillas sin datos.
+  const vm = useMemo(() => {
+    const meta = {
+      title: settings.title,
+      matchday: settings.matchday,
+      date: settings.date,
+      moderator: settings.moderator,
+    };
+    if (engineResult && rooms.length > 0) {
+      return buildViewModel(
+        engineResult,
+        rooms.map((source) => source.room),
+        meta,
+      );
+    }
+    const sampleRoom = parseLog(sampleLogText, 'MatchResult_example_log.txt');
+    const roomsSample = [sampleRoom];
+    const sampleResult = computeStandings(roomsSample, {
+      mode: 'standard',
+      positionPoints: DEFAULT_SETTINGS.positionPoints,
+      killPoints: DEFAULT_SETTINGS.killPoints,
+      tiebreak: DEFAULT_SETTINGS.tiebreak,
+    });
+    return buildViewModel(sampleResult, roomsSample, {
+      title: 'TORNEO EJEMPLO',
+      matchday: '1',
+      date: '2026-10-12',
+      moderator: 'Moderador',
+    });
+  }, [engineResult, rooms, settings.title, settings.matchday, settings.date, settings.moderator]);
+
+  // Corolario de estilo por plantilla: overrides propios > valores globales.
+  const overrides = settings.styleByTemplate[template.id];
+  const templateStyle = {
+    accent: overrides?.accent ?? settings.accentColor,
+    text: overrides?.text ?? settings.textColor,
+    fontPairId: overrides?.fontPairId ?? settings.fontFamily,
+  };
+
+  // Logo/fondo efectivos (usuario > por defecto). El fondo se procesa siempre
+  // con scrim horneado según el tema de la plantilla (oscuro con tinta oscura,
+  // claro con tinta clara, §7.2).
+  const effectiveLogoRaw =
     logo.image.dataUrl ?? (settings.useDefaultLogo ? defaultAssets.logo : undefined);
-  const effectiveBackgroundUrl =
+  const effectiveBackgroundRaw =
     background.image.dataUrl ??
     (settings.useDefaultBackground ? defaultAssets.background : undefined);
 
-  const exportInfo = { w: CANVAS_WIDTH * 2, h: CANVAS_SIZES[settings.format] * 2 };
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const logoProcessed =
+          effectiveLogoRaw !== undefined
+            ? await processImage(effectiveLogoRaw, 'original')
+            : undefined;
+        const scrimOpacity =
+          settings.useDefaultBackground || background.image.dataUrl !== undefined
+            ? settings.scrimOpacity
+            : undefined;
+        const scrim =
+          template.theme === 'light' ? { r: 243, g: 238, b: 226 } : { r: 7, g: 16, b: 14 };
+        const backgroundProcessed =
+          effectiveBackgroundRaw !== undefined
+            ? await processImage(effectiveBackgroundRaw, 'scrim', { scrimOpacity, scrim })
+            : undefined;
+        if (active) setProcessedAssets({ logo: logoProcessed, background: backgroundProcessed });
+      } catch {
+        if (active)
+          setProcessedAssets({ logo: effectiveLogoRaw, background: effectiveBackgroundRaw });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [
+    effectiveLogoRaw,
+    effectiveBackgroundRaw,
+    template.theme,
+    settings.scrimOpacity,
+    settings.useDefaultBackground,
+    background.image.dataUrl,
+  ]);
+
+  const canvasHeight = heightForFormat(settings.format);
+  const exportInfo = { w: CANVAS_WIDTH * 2, h: canvasHeight * 2 };
   const hasRooms = rooms.length > 0;
 
   async function handleExport(
@@ -115,6 +216,35 @@ function App() {
     } catch {
       setExportStatus('error');
       setStatusMessage(i18n.preview.exportError);
+    }
+  }
+
+  function handleExportTemplate(): void {
+    const slug = slugifyFileName('plantilla', template.name);
+    downloadJson(
+      serializeTemplate(settings, { logo: effectiveLogoRaw, background: effectiveBackgroundRaw }),
+      `${slug}.json`,
+    );
+  }
+
+  async function handleImportTemplate(file: File): Promise<void> {
+    try {
+      const raw = await file.text();
+      const bundle = parseTemplate(raw);
+      if (!bundle) {
+        setExportStatus('error');
+        setStatusMessage(i18n.style.templateInvalid);
+        return;
+      }
+      patch(bundle.settings);
+      if (bundle.images.logo) logo.commit(await blobFromDataUrl(bundle.images.logo));
+      if (bundle.images.background)
+        background.commit(await blobFromDataUrl(bundle.images.background));
+      setExportStatus('ok');
+      setStatusMessage(i18n.style.templateImported);
+    } catch {
+      setExportStatus('error');
+      setStatusMessage(i18n.style.templateInvalid);
     }
   }
 
@@ -155,7 +285,6 @@ function App() {
       </header>
 
       <main className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-5 px-3 pb-10 pt-5 sm:px-6 sm:gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        {/* En móvil la vista previa va arriba */}
         <div className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
           <StepCard number={1} title={i18n.steps.files}>
             <FileDropzone onFiles={(files) => void addFiles(files)}>
@@ -183,8 +312,24 @@ function App() {
             <CalcModePanel settings={settings} engineResult={engineResult} onChange={patch} />
           </StepCard>
 
-          <StepCard number={4} title={i18n.steps.style}>
-            <StylePanel settings={settings} onChange={patch} logo={logo} background={background} />
+          <StepCard number={4} title={i18n.steps.template}>
+            <Picker
+              templateId={settings.templateId}
+              onSelect={(id) => patch({ templateId: id })}
+              sampleVm={vm}
+            />
+          </StepCard>
+
+          <StepCard number={5} title={i18n.steps.customize}>
+            <StylePanel
+              settings={settings}
+              onChange={patch}
+              config={template}
+              logo={logo}
+              background={background}
+              onExportTemplate={handleExportTemplate}
+              onImportTemplate={(file) => void handleImportTemplate(file)}
+            />
           </StepCard>
         </div>
 
@@ -192,7 +337,9 @@ function App() {
           <div className="w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-bold tracking-wide uppercase">Vista previa</h2>
+                <h2 className="text-sm font-bold tracking-wide uppercase">
+                  {`${template.name} · vista previa`}
+                </h2>
                 <p className="text-[11px] text-[var(--muted)]">
                   {i18n.preview.help(exportInfo.w, exportInfo.h)}
                 </p>
@@ -219,28 +366,23 @@ function App() {
               </fieldset>
             </div>
 
-            {engineResult ? (
-              <PreviewFrame
+            <TemplateFrame
+              width={CANVAS_WIDTH}
+              height={canvasHeight}
+              innerRef={(node) => {
+                innerPreviewNode = node;
+              }}
+            >
+              <ResultImage
+                vm={vm}
+                config={template}
+                style={templateStyle}
+                assets={processedAssets}
                 format={settings.format}
-                innerRef={(node) => {
-                  innerPreviewNode = node;
-                }}
-              >
-                <ResultImage
-                  result={engineResult}
-                  settings={settings}
-                  logoUrl={effectiveLogoUrl}
-                  backgroundUrl={effectiveBackgroundUrl}
-                />
-              </PreviewFrame>
-            ) : (
-              <div className="grid h-72 place-items-center rounded-xl border border-dashed border-[var(--border-strong)] p-6 text-center">
-                <div>
-                  <p className="font-medium">{i18n.preview.emptyTitle}</p>
-                  <p className="mt-1 text-xs text-[var(--text-2)]">{i18n.preview.emptyBody}</p>
-                </div>
-              </div>
-            )}
+                width={CANVAS_WIDTH}
+                height={canvasHeight}
+              />
+            </TemplateFrame>
 
             {exportStatus === 'error' && (
               <p role="alert" className="mt-3 text-xs text-[var(--bronze)]">
@@ -279,6 +421,11 @@ function App() {
       </main>
     </div>
   );
+}
+
+async function blobFromDataUrl(dataUrl: string): Promise<Blob> {
+  const response = await fetch(dataUrl);
+  return response.blob();
 }
 
 export default App;

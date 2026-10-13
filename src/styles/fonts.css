@@ -1,17 +1,11 @@
 /* Fuentes autoalojadas vía @fontsource: sin CDNs ni llamadas de red externas.
-   Subsets latin únicamente para las nuevas; font-display: swap. */
+   Solo el par P1 va en el bundle inicial (TEMPLATESv2 §6); los pares P2–P10
+   se cargan con import() dinámico al seleccionar la plantilla (fonts.ts). */
 
 @import '@fontsource/syne/latin-700.css';
 @import '@fontsource/syne/latin-800.css';
-@import '@fontsource/oxanium/latin-500.css';
-@import '@fontsource/oxanium/latin-700.css';
-@import '@fontsource/oxanium/latin-800.css';
-@import '@fontsource/rubik/latin-700.css';
-@import '@fontsource/rubik/latin-800.css';
-@import '@fontsource/archivo/latin-700.css';
-@import '@fontsource/archivo/latin-800.css';
-@import '@fontsource/sora/latin-700.css';
-@import '@fontsource/sora/latin-800.css';
+@import '@fontsource/syne/latin-ext-700.css';
+@import '@fontsource/syne/latin-ext-800.css';
 @import '@fontsource/space-grotesk/latin-400.css';
 @import '@fontsource/space-grotesk/latin-500.css';
 @import '@fontsource/space-grotesk/latin-700.css';

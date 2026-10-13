@@ -1,7 +1,9 @@
 import type { Settings } from '../core/types';
+import { FONT_PAIR_IDS } from '../features/templates/fonts';
+import { TEMPLATES } from '../features/templates/templates';
 
 const STORAGE_KEY = 'laurel:settings';
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const DEFAULT_SETTINGS: Settings = {
   title: '',
@@ -12,7 +14,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tiebreak: ['kills', 'best-rank', 'booyahs'],
   positionPoints: [12, 9, 8, 7, 6, 5, 4, 3, 2, 1],
   killPoints: 1,
-  fontFamily: 'Syne',
+  fontFamily: 'p1',
   textColor: '#f4efe6',
   accentColor: '#34d399',
   format: '4:5',
@@ -20,19 +22,20 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'laurel',
   useDefaultLogo: true,
   useDefaultBackground: true,
+  templateId: 'corona',
+  styleByTemplate: {},
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-/** Carga los settings guardados; hace merge tolerante con los defaults. Nunca lanza. */
+/** Carga los settings guardados; versiones ≤ v3 se migran con merge sobre defaults. */
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
     const parsed: unknown = JSON.parse(raw);
-    // Versiones anteriores (≤ SCHEMA_VERSION) se migran haciendo merge con defaults.
     if (
       !isRecord(parsed) ||
       !isRecord(parsed.settings) ||
@@ -41,10 +44,22 @@ export function loadSettings(): Settings {
     ) {
       return { ...DEFAULT_SETTINGS };
     }
-    return { ...DEFAULT_SETTINGS, ...parsed.settings } as Settings;
+    const merged = { ...DEFAULT_SETTINGS, ...parsed.settings } as Settings;
+    return normalizeSettings(merged);
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
+}
+
+/** Normaliza al catálogo actual: pares de fuentes válidos y plantilla existente. */
+export function normalizeSettings(settings: Settings): Settings {
+  const fontFamily = FONT_PAIR_IDS.has(settings.fontFamily)
+    ? settings.fontFamily
+    : DEFAULT_SETTINGS.fontFamily;
+  const templateId = TEMPLATES.some((t) => t.id === settings.templateId)
+    ? settings.templateId
+    : DEFAULT_SETTINGS.templateId;
+  return { ...settings, fontFamily, templateId };
 }
 
 /** Guarda los settings; en modo privado o cuota llena falla en silencio controlado. */

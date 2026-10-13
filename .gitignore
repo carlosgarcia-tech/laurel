@@ -3,7 +3,8 @@ dist/
 coverage/
 *.local
 .DS_Store
-
+AGENTS.md
+TEMPLATES.md
 # Artefactos de exportación del dueño (pruebas locales)
 resultados-*.png
 resultados-*.jpg
@@ -11,3 +12,5 @@ resultados-*.jpg
 # Originales de assets aún no organizados (viven en public/brand/ y src/assets/)
 /logo.png
 /default-background.*
+TEMPLATESv2.md
+plantilla-*.json

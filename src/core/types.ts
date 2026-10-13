@@ -7,8 +7,8 @@ export type TiebreakRule = 'kills' | 'best-rank' | 'booyahs';
 /** Formatos de exportación de la imagen final. */
 export type ImageFormat = '4:5' | '9:16' | '1:1';
 
-/** Fuentes display autoalojadas disponibles en el editor. */
-export type DisplayFont = 'Syne' | 'Oxanium' | 'Space Grotesk' | 'Rubik' | 'Archivo' | 'Sora';
+/** Id del par de fuentes (biblioteca de TEMPLATESv2 §6, p1…p10). */
+export type FontPairId = string;
 
 /** Un jugador dentro de una sala/partida. */
 export interface PlayerEntry {
@@ -107,6 +107,13 @@ export interface EngineOptions {
 /** Presets de tema visual para la imagen generada. */
 export type ThemePreset = 'laurel' | 'neon' | 'corona' | 'acero';
 
+/** Overrides de estilo por plantilla (acento, texto, par de fuentes). */
+export interface TemplateStyleOverrides {
+  accent?: string;
+  text?: string;
+  fontPairId?: string;
+}
+
 /** Ajustes del editor (persistidos con versión de esquema). */
 export interface Settings {
   title: string;
@@ -117,7 +124,8 @@ export interface Settings {
   tiebreak: TiebreakRule[];
   positionPoints: number[];
   killPoints: number;
-  fontFamily: DisplayFont;
+  /** Id del par de fuentes activo (p1…p10). */
+  fontFamily: FontPairId;
   textColor: string;
   accentColor: string;
   format: ImageFormat;
@@ -129,4 +137,8 @@ export interface Settings {
   useDefaultLogo: boolean;
   /** Mostrar el fondo por defecto cuando el usuario no sube uno propio. */
   useDefaultBackground: boolean;
+  /** Plantilla activa del catálogo (TEMPLATES.md). */
+  templateId: string;
+  /** Overrides de estilo por plantilla (acento/texto/fontPairId). */
+  styleByTemplate: Record<string, TemplateStyleOverrides>;
 }

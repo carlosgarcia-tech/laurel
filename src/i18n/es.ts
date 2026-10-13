@@ -10,6 +10,8 @@ export const i18n = {
     files: 'Archivos de resultados',
     info: 'Datos del torneo',
     mode: 'Modo de cálculo',
+    template: 'Plantilla',
+    customize: 'Personalización',
     style: 'Estilo',
   },
 
@@ -63,6 +65,7 @@ export const i18n = {
     fondoHint: 'PNG, JPG, SVG o WebP · se optimiza a máx. 2160 px',
     removeImage: 'Eliminar',
     font: 'Tipo de fuente',
+    fontHintPeso: 'Pesos display:',
     textColor: 'Color de fuente',
     accentColor: 'Color de acento',
     scrim: 'Oscuridad del fondo',
@@ -77,6 +80,10 @@ export const i18n = {
     themeCorona: 'Dorado real',
     themeNeon: 'Neón violeta',
     themeAcero: 'Acero frío',
+    exportTemplate: 'Exportar plantilla (JSON)',
+    importTemplate: 'Importar plantilla (JSON)',
+    templateImported: 'Plantilla importada',
+    templateInvalid: 'El archivo no es una plantilla de Laurel válida.',
   },
 
   preview: {

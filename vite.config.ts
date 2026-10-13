@@ -10,6 +10,10 @@ export default defineConfig({
     target: 'es2020',
     sourcemap: false,
     rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        'contact-sheet': fileURLToPath(new URL('./contact-sheet.html', import.meta.url)),
+      },
       output: {
         manualChunks: {
           react: ['react', 'react-dom'],
