@@ -64,21 +64,21 @@ Una sola estructura (la de **Corona**) con 13 variantes: cambian colores, tipogr
 posiciones y formatos, pero todas mantienen los mismos bloques (cabecera + píldoras,
 podio, lista 4+, MVP y pie). La galería tiene pestañas **Todas · General · Free Fire**.
 
-| Plantilla                | Catálogo    | Tema   | Rasgos                                                          |
-| ------------------------ | ----------- | ------ | --------------------------------------------------------------- |
-| **Corona** (por defecto) | general     | oscura | esmeralda/dorado, podio escalonado, barras, anillos             |
-| **Brasa**                | general     | oscura | rojo-naranja, banner, MVP arriba, diagonales, ángulos rectos    |
-| **Medianoche**           | general     | oscura | azul profundo, todo centrado, MVP en franja, arcos              |
-| **Marfil**               | general     | clara  | marfil + verde bosque, podio héroe, puntos guía, `1.º`          |
-| **Pista**                | general     | clara  | concreto claro/naranja, cifras grandes, chips, rayas            |
-| **Granate**              | general     | oscura | vino/champán, centrada, anillos finos, serif                    |
-| **Cobalto**              | general     | oscura | banner amarillo, podio en fila, MVP arriba, ángulos rectos      |
-| **Arena**                | general     | clara  | arena/terracota, podio héroe, chips, retícula de puntos         |
-| **Hielo**                | general     | clara  | azul acero/ámbar, cuadrícula, numeración `#4`                   |
-| **Ámbar**                | general     | oscura | negro/ámbar, `scan` de pantalla, cifras en mono                 |
-| **Booyah**               | Free Fire   | oscura | negro cálido/naranja-ámbar, banner, podio héroe, chevrons       |
-| **Zona Roja**            | Free Fire   | oscura | rojo/ámbar, podio en fila, anillos de zona, barras              |
-| **Kalahari**             | Free Fire   | clara  | arena/tierra cocida/verde azulado, centrada, podio escalonado   |
+| Plantilla                | Catálogo  | Tema   | Rasgos                                                        |
+| ------------------------ | --------- | ------ | ------------------------------------------------------------- |
+| **Corona** (por defecto) | general   | oscura | esmeralda/dorado, podio escalonado, barras, anillos           |
+| **Brasa**                | general   | oscura | rojo-naranja, banner, MVP arriba, diagonales, ángulos rectos  |
+| **Medianoche**           | general   | oscura | azul profundo, todo centrado, MVP en franja, arcos            |
+| **Marfil**               | general   | clara  | marfil + verde bosque, podio héroe, puntos guía, `1.º`        |
+| **Pista**                | general   | clara  | concreto claro/naranja, cifras grandes, chips, rayas          |
+| **Granate**              | general   | oscura | vino/champán, centrada, anillos finos, serif                  |
+| **Cobalto**              | general   | oscura | banner amarillo, podio en fila, MVP arriba, ángulos rectos    |
+| **Arena**                | general   | clara  | arena/terracota, podio héroe, chips, retícula de puntos       |
+| **Hielo**                | general   | clara  | azul acero/ámbar, cuadrícula, numeración `#4`                 |
+| **Ámbar**                | general   | oscura | negro/ámbar, `scan` de pantalla, cifras en mono               |
+| **Booyah**               | Free Fire | oscura | negro cálido/naranja-ámbar, banner, podio héroe, chevrons     |
+| **Zona Roja**            | Free Fire | oscura | rojo/ámbar, podio en fila, anillos de zona, barras            |
+| **Kalahari**             | Free Fire | clara  | arena/tierra cocida/verde azulado, centrada, podio escalonado |
 
 En todas: par de fuentes editable (13 pares autoalojados, carga perezosa), color de
 acento, color de texto, logo y fondo propio (scrim horneado con el bg de la plantilla;
