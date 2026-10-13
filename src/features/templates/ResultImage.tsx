@@ -23,6 +23,7 @@ export function ResultImage({
   format,
   width,
   height,
+  reveal = false,
 }: TemplateProps): ReactElement {
   const geo = GEOMETRY[format];
   const t = deriveTokens(config, style);
@@ -55,6 +56,7 @@ export function ResultImage({
     density: rawDensity,
     listRows,
     part,
+    reveal,
   };
 
   const rootStyle: CSSProperties = {

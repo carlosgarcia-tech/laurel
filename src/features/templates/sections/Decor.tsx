@@ -42,7 +42,7 @@ export function Decor({ scene }: { scene: Scene }) {
         >
           {widths.map((w, i) => (
             <div
-              key={w}
+              key={i}
               style={{
                 position: 'absolute',
                 top: -60,
@@ -171,6 +171,83 @@ export function Decor({ scene }: { scene: Scene }) {
           }}
         />
       );
+    case 'chevrons': {
+      // Tres chevrones geométricos (grosor 22 px) en la esquina superior derecha
+      // (TEMPLATES-FREEFIRE §4), opacidades .9 / .55 / .3, separados 26 px.
+      const opacities = [0.9, 0.55, 0.3];
+      const h = 96;
+      const w = 64;
+      return (
+        <div aria-hidden="true" style={{ ...layer, pointerEvents: 'none' }}>
+          <svg
+            width={opacities.length * (w + 26)}
+            height={h}
+            viewBox={`0 0 ${opacities.length * (w + 26)} ${h}`}
+            style={{ position: 'absolute', top: 40, right: 36 }}
+          >
+            {opacities.map((opacity, i) => (
+              <polygon
+                key={opacity}
+                points={`0,0 22,0 ${w},${h / 2} 22,${h} 0,${h} ${w - 22},${h / 2}`}
+                fill={t.accent}
+                opacity={opacity}
+                transform={`translate(${i * (w + 26)}, 0)`}
+              />
+            ))}
+          </svg>
+        </div>
+      );
+    }
+    case 'zone': {
+      // Mapa táctico (TEMPLATES-FREEFIRE §4): círculos concéntricos (el medio
+      // punteado) + cruceta, anclado 180 px a la derecha y 200 px abajo del
+      // lienzo 4:5 — el mismo anclaje en otros formatos mantiene la coherencia.
+      const linecap: 'butt' | 'round' = config.radius >= 8 ? 'round' : 'butt';
+      return (
+        <div aria-hidden="true" style={layer}>
+          <svg
+            width={920}
+            height={920}
+            viewBox="0 0 920 920"
+            style={{ position: 'absolute', right: 180 - 460, bottom: 200 - 460 }}
+          >
+            <circle
+              cx={460}
+              cy={460}
+              r={160}
+              fill="none"
+              stroke={t.accent}
+              strokeWidth={1.5}
+              opacity={0.18}
+            />
+            <circle
+              cx={460}
+              cy={460}
+              r={300}
+              fill="none"
+              stroke={t.accent}
+              strokeWidth={1.5}
+              strokeDasharray="8 6"
+              opacity={0.14}
+            />
+            <circle
+              cx={460}
+              cy={460}
+              r={460}
+              fill="none"
+              stroke={t.accent2}
+              strokeWidth={1.5}
+              opacity={0.1}
+            />
+            <g stroke={t.accent2} strokeWidth={1.5} opacity={0.18} strokeLinecap={linecap}>
+              <line x1={440} y1={460} x2={480} y2={460} />
+              <line x1={460} y1={440} x2={460} y2={480} />
+            </g>
+            <circle cx={460} cy={460} r={3} fill={t.accent2} opacity={0.18} />
+          </svg>
+        </div>
+      );
+    }
   }
 }
 

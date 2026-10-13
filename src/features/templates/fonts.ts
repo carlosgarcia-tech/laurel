@@ -65,6 +65,27 @@ export const FONT_PAIRS: FontPairDef[] = [
     body: 'Share Tech Mono',
     displayWeights: '600/700',
   },
+  {
+    id: 'p11',
+    label: 'Big Shoulders Display + Barlow',
+    display: 'Big Shoulders Display',
+    body: 'Barlow',
+    displayWeights: '800/900',
+  },
+  {
+    id: 'p12',
+    label: 'Saira Extra Condensed + Saira',
+    display: 'Saira Extra Condensed',
+    body: 'Saira',
+    displayWeights: '700/800',
+  },
+  {
+    id: 'p13',
+    label: 'Alfa Slab One + Barlow Semi Condensed',
+    display: 'Alfa Slab One',
+    body: 'Barlow Semi Condensed',
+    displayWeights: '400',
+  },
 ];
 
 export function getFontPair(id: string): FontPairDef {
@@ -175,6 +196,42 @@ const LOADERS: Record<string, FontImport> = {
       import('@fontsource/chakra-petch/latin-ext-700.css'),
       // Share Tech Mono solo publica subset latin (cobertura limitada del paquete).
       import('@fontsource/share-tech-mono/latin-400.css'),
+    ]);
+  },
+  p11: async () => {
+    await Promise.all([
+      // big-shoulders-display no publica la clave "./*.css" en exports:
+      // el subpath va sin extensión ("./*" → "./*.css").
+      import('@fontsource/big-shoulders-display/latin-800'),
+      import('@fontsource/big-shoulders-display/latin-900'),
+      import('@fontsource/big-shoulders-display/latin-ext-800'),
+      import('@fontsource/big-shoulders-display/latin-ext-900'),
+      import('@fontsource/barlow/latin-400.css'),
+      import('@fontsource/barlow/latin-500.css'),
+      import('@fontsource/barlow/latin-700.css'),
+      import('@fontsource/barlow/latin-ext-400.css'),
+    ]);
+  },
+  p12: async () => {
+    await Promise.all([
+      import('@fontsource/saira-extra-condensed/latin-700.css'),
+      import('@fontsource/saira-extra-condensed/latin-800.css'),
+      import('@fontsource/saira-extra-condensed/latin-ext-700.css'),
+      import('@fontsource/saira-extra-condensed/latin-ext-800.css'),
+      import('@fontsource/saira/latin-400.css'),
+      import('@fontsource/saira/latin-500.css'),
+      import('@fontsource/saira/latin-700.css'),
+      import('@fontsource/saira/latin-ext-400.css'),
+    ]);
+  },
+  p13: async () => {
+    await Promise.all([
+      import('@fontsource/alfa-slab-one/latin-400.css'),
+      import('@fontsource/alfa-slab-one/latin-ext-400.css'),
+      import('@fontsource/barlow-semi-condensed/latin-400.css'),
+      import('@fontsource/barlow-semi-condensed/latin-500.css'),
+      import('@fontsource/barlow-semi-condensed/latin-700.css'),
+      import('@fontsource/barlow-semi-condensed/latin-ext-400.css'),
     ]);
   },
 };

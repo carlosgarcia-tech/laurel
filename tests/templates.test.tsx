@@ -7,8 +7,14 @@ import { defaultEngineOptions } from '../src/core/engine/presets';
 import { parseLog } from '../src/core/parser/parseLog';
 import { buildViewModel } from '../src/core/viewmodel/buildViewModel';
 import { ResultImage } from '../src/features/templates/ResultImage';
-import { TEMPLATES, densityFor, getTemplate } from '../src/features/templates/templates';
+import {
+  TEMPLATES,
+  densityFor,
+  getTemplate,
+  migrateTemplateId,
+} from '../src/features/templates/templates';
 import { readableOn, mix } from '../src/features/templates/tokens';
+import { contrastRatio } from '../src/utils/color';
 import { FONT_PAIRS, FONT_PAIR_IDS } from '../src/features/templates/fonts';
 import type { TemplateConfig } from '../src/features/templates/types';
 import fixtureText from './fixtures/MatchResult_example_log.txt?raw';
@@ -40,13 +46,13 @@ function renderTemplate(config: TemplateConfig, format: '4:5' | '9:16' | '1:1' =
   return container.textContent ?? '';
 }
 
-describe('Catálogo (TEMPLATESv2 §5)', () => {
-  it('hay exactamente 10 plantillas con ids únicos', () => {
-    expect(TEMPLATES).toHaveLength(10);
-    expect(new Set(TEMPLATES.map((t) => t.id)).size).toBe(10);
+describe('Catálogo (TEMPLATESv2 §5 + FF §3)', () => {
+  it('hay exactamente 13 plantillas con ids únicos', () => {
+    expect(TEMPLATES).toHaveLength(13);
+    expect(new Set(TEMPLATES.map((t) => t.id)).size).toBe(13);
   });
 
-  it('la tabla 5.1 va copiada tal cual', () => {
+  it('la tabla 5.1 + 3.1 van copiadas tal cual', () => {
     const expected: Array<[string, string, string]> = [
       ['corona', 'left', 'rings'],
       ['brasa', 'banner', 'slashes'],
@@ -55,9 +61,12 @@ describe('Catálogo (TEMPLATESv2 §5)', () => {
       ['pista', 'split', 'stripes'],
       ['granate', 'center', 'rings'],
       ['cobalto', 'banner', 'slashes'],
-      ['selva', 'left', 'dots'],
+      ['arena', 'left', 'dots'],
       ['hielo', 'split', 'grid'],
       ['ambar', 'banner', 'scan'],
+      ['booyah', 'banner', 'chevrons'],
+      ['zona-roja', 'split', 'zone'],
+      ['kalahari', 'center', 'slashes'],
     ];
     for (const [id, header, decor] of expected) {
       const template = getTemplate(id);
@@ -66,10 +75,93 @@ describe('Catálogo (TEMPLATESv2 §5)', () => {
     }
     expect(getTemplate('marfil').theme).toBe('light');
     expect(getTemplate('hielo').theme).toBe('light');
+    expect(getTemplate('arena').theme).toBe('light');
+    expect(getTemplate('pista').theme).toBe('light');
+    expect(getTemplate('kalahari').theme).toBe('light');
     expect(getTemplate('brasa').mvpPlacement).toBe('before-list');
+    expect(getTemplate('booyah').mvpPlacement).toBe('before-list');
     expect(getTemplate('corona').numerals).toBe('pad');
     expect(getTemplate('marfil').list).toBe('dots');
     expect(getTemplate('pista').podium).toBe('row');
+    // Configuración exacta FF §3.1.
+    const booyah = getTemplate('booyah');
+    expect(booyah).toMatchObject({
+      podium: 'hero',
+      list: 'chips',
+      mvp: 'strip',
+      radius: 0,
+      numerals: 'pad',
+      fontPairId: 'p11',
+    });
+    const zona = getTemplate('zona-roja');
+    expect(zona).toMatchObject({
+      podium: 'row',
+      list: 'bars',
+      mvp: 'cards',
+      radius: 4,
+      numerals: 'plain',
+      fontPairId: 'p12',
+    });
+    const kalahari = getTemplate('kalahari');
+    expect(kalahari).toMatchObject({
+      podium: 'stepped',
+      list: 'dots',
+      mvp: 'cards',
+      radius: 8,
+      numerals: 'ordinal',
+      fontPairId: 'p13',
+    });
+  });
+
+  it('los tokens FF coinciden con la tabla 3.2', () => {
+    expect(getTemplate('booyah').tokens).toEqual({
+      bg: '#0d0a06',
+      surface: '#17110a',
+      border: '#3b2a14',
+      text: '#f6efe2',
+      muted: '#b09a7d',
+      accent: '#ff8a00',
+      accent2: '#ffd23a',
+    });
+    expect(getTemplate('zona-roja').tokens).toEqual({
+      bg: '#0a0e12',
+      surface: '#121a21',
+      border: '#263541',
+      text: '#eef2f4',
+      muted: '#8c9eab',
+      accent: '#ff3b30',
+      accent2: '#ffb020',
+    });
+    expect(getTemplate('kalahari').tokens).toEqual({
+      bg: '#efe3c9',
+      surface: '#f8f0dc',
+      border: '#d2bf98',
+      text: '#2a1a0e',
+      muted: '#6d5a43',
+      accent: '#c2410c',
+      accent2: '#1f6f6b',
+    });
+  });
+
+  it('el category reparte 10 general y 3 free-fire', () => {
+    expect(TEMPLATES.filter((t) => t.category === 'general')).toHaveLength(10);
+    expect(TEMPLATES.filter((t) => t.category === 'free-fire').map((t) => t.id)).toEqual([
+      'booyah',
+      'zona-roja',
+      'kalahari',
+    ]);
+  });
+
+  it('hay 5 plantillas claras y 8 oscuras (P1.2 + FF)', () => {
+    const light = TEMPLATES.filter((t) => t.theme === 'light').map((t) => t.id);
+    expect(light.sort()).toEqual(['arena', 'hielo', 'kalahari', 'marfil', 'pista']);
+    expect(TEMPLATES.filter((t) => t.theme === 'dark')).toHaveLength(8);
+  });
+
+  it('el id antiguo «selva» migra a «arena»', () => {
+    expect(migrateTemplateId('selva')).toBe('arena');
+    expect(migrateTemplateId('corona')).toBe('corona');
+    expect(TEMPLATES.some((t) => t.id === 'selva')).toBe(false);
   });
 
   it('cada plantilla cambia ≥ 3 opciones de §1.2 respecto a Corona', () => {
@@ -93,7 +185,7 @@ describe('Catálogo (TEMPLATESv2 §5)', () => {
     }
   });
 
-  it('los pares de fuentes cubren p1…p10 sin duplicados', () => {
+  it('los pares de fuentes cubren p1…p13 sin duplicados', () => {
     expect(FONT_PAIRS.map((p) => p.id)).toEqual([
       'p1',
       'p2',
@@ -105,6 +197,9 @@ describe('Catálogo (TEMPLATESv2 §5)', () => {
       'p8',
       'p9',
       'p10',
+      'p11',
+      'p12',
+      'p13',
     ]);
     for (const template of TEMPLATES) {
       expect(FONT_PAIR_IDS.has(template.fontPairId)).toBe(true);
@@ -122,6 +217,31 @@ describe('Tokens derivados (§5.2)', () => {
     expect(readableOn('#34d399')).toBe('#0a0a0a'); // esmeralda clara → texto oscuro
     expect(readableOn('#0f7a55')).toBe('#ffffff'); // verde bosque → texto claro
   });
+
+  it('arena y pista (P1.2) tienen texto y chips legibles', () => {
+    for (const id of ['arena', 'pista'] as const) {
+      const { tokens } = getTemplate(id);
+      // Texto principal ≥ 4.5:1 sobre el fondo.
+      expect(contrastRatio(tokens.text, tokens.bg) ?? 0).toBeGreaterThanOrEqual(4.5);
+      // Texto sobre chips/barras del acento ≥ 4.5:1 (readableOn elige negro/blanco).
+      expect(contrastRatio(readableOn(tokens.accent), tokens.accent) ?? 0).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    }
+    // Naranja de Pista → texto oscuro sobre los chips.
+    expect(readableOn(getTemplate('pista').tokens.accent)).toBe('#0a0a0a');
+  });
+
+  it('las 3 plantillas FF tienen contraste ≥ 4.5:1 (FF §9)', () => {
+    for (const id of ['booyah', 'zona-roja', 'kalahari'] as const) {
+      const { tokens } = getTemplate(id);
+      expect(contrastRatio(tokens.text, tokens.bg) ?? 0).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(readableOn(tokens.accent), tokens.accent) ?? 0).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(contrastRatio(tokens.muted, tokens.bg) ?? 0).toBeGreaterThanOrEqual(3);
+    }
+  });
 });
 
 describe('Densidad y bloqueo de listas (§3)', () => {
@@ -133,7 +253,7 @@ describe('Densidad y bloqueo de listas (§3)', () => {
   });
 });
 
-describe('Render de las 10 plantillas con el fixture real', () => {
+describe('Render de las 13 plantillas con el fixture real', () => {
   for (const template of TEMPLATES) {
     it(`${template.name} muestra podio, lista, MVP y pie`, () => {
       const text = renderTemplate(template);
@@ -144,6 +264,65 @@ describe('Render de las 10 plantillas con el fixture real', () => {
       expect(text).toContain('143'); // puntos totales en píldoras
     });
   }
+
+  it('el sello BOOYAH ×N solo aparece en Booyah y con booyahs reales (FF §0/§3.3)', () => {
+    // El sello es "Booyah ×N" SIN espacio (el pie usa "Booyah × N" con espacio).
+    const sealPattern = /Booyah ×\d/;
+    // El 1.º del fixture (TAURUS, 32 pts) no tiene booyahs → sin sello.
+    expect(renderTemplate(getTemplate('booyah'))).not.toMatch(sealPattern);
+    // Con un líder que sí tiene booyahs → sello en Booyah…
+    const leaderBooyahVm = {
+      ...vm,
+      podium: vm.podium.map((row, i) => (i === 0 ? { ...row, booyahs: 2 } : row)),
+    };
+    const renderBooyah = (config: TemplateConfig): string => {
+      const { container } = render(
+        <ResultImage
+          vm={leaderBooyahVm}
+          config={config}
+          style={{}}
+          assets={{}}
+          format="4:5"
+          width={1080}
+          height={1350}
+        />,
+      );
+      return container.textContent ?? '';
+    };
+    expect(renderBooyah(getTemplate('booyah'))).toMatch(sealPattern);
+    // …y nunca en las demás plantillas.
+    for (const id of ['corona', 'zona-roja', 'kalahari']) {
+      expect(renderBooyah(getTemplate(id))).not.toMatch(sealPattern);
+    }
+  });
+
+  it('reveal solo añade la clase de animación en el podio (preview del editor)', () => {
+    const { container: staticContainer } = render(
+      <ResultImage
+        vm={vm}
+        config={getTemplate('booyah')}
+        style={{}}
+        assets={{}}
+        format="4:5"
+        width={1080}
+        height={1350}
+      />,
+    );
+    expect(staticContainer.querySelectorAll('.podium-reveal').length).toBe(0);
+    const { container: revealed } = render(
+      <ResultImage
+        vm={vm}
+        config={getTemplate('booyah')}
+        style={{}}
+        assets={{}}
+        format="4:5"
+        width={1080}
+        height={1350}
+        reveal
+      />,
+    );
+    expect(revealed.querySelectorAll('.podium-reveal').length).toBeGreaterThan(0);
+  });
 
   it('todas las plantillas renderizan también en 9:16 y 1:1', () => {
     for (const template of TEMPLATES) {

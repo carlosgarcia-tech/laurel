@@ -1,6 +1,9 @@
 /**
- * Exportación PNG (AGENTS.md §9): html-to-image se importa dinámicamente solo
- * al exportar; se espera a document.fonts.ready y a que las imágenes decodifiquen.
+ * Exportación PNG (AGENTS.md §9 + FF §6.3): html-to-image se importa
+ * dinámicamente solo al exportar; se espera a document.fonts.ready, a que las
+ * imágenes decodifiquen y a que termine cualquier animación en curso. El nodo
+ * se marca `data-capture` durante la captura: una regla CSS anula transiciones
+ * y animaciones para que el PNG sea idéntico con o sin movimiento en el editor.
  */
 
 export async function exportPng(node: HTMLElement): Promise<string> {
@@ -20,12 +23,28 @@ export async function exportPng(node: HTMLElement): Promise<string> {
     }),
   );
 
-  // Calentamiento: en Safari la primera exportación puede salir sin fuentes/imágenes.
-  await toPng(node, { pixelRatio: 1, cacheBust: false });
-  return toPng(node, {
-    pixelRatio: 2,
-    cacheBust: false,
-  });
+  // Esperar animaciones en curso (p. ej. revelado del podio) antes de capturar.
+  if (typeof node.getAnimations === 'function') {
+    await Promise.all(
+      node.getAnimations({ subtree: true }).map((animation) =>
+        animation.finished.catch(() => {
+          // Una animación cancelada no debe bloquear la exportación.
+        }),
+      ),
+    );
+  }
+
+  node.setAttribute('data-capture', 'true');
+  try {
+    // Calentamiento: en Safari la primera exportación puede salir sin fuentes/imágenes.
+    await toPng(node, { pixelRatio: 1, cacheBust: false });
+    return await toPng(node, {
+      pixelRatio: 2,
+      cacheBust: false,
+    });
+  } finally {
+    node.removeAttribute('data-capture');
+  }
 }
 
 export function slugifyFileName(title: string, matchday: string): string {

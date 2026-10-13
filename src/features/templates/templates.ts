@@ -12,6 +12,7 @@ export const TEMPLATES: TemplateConfig[] = [
     id: 'corona',
     name: 'Corona',
     blurb: 'La original: esmeralda y dorado, podio escalonado y barras hasta el líder.',
+    category: 'general',
     theme: 'dark',
     tokens: {
       bg: '#07100e',
@@ -37,6 +38,7 @@ export const TEMPLATES: TemplateConfig[] = [
     id: 'brasa',
     name: 'Brasa',
     blurb: 'Enérgica: naranja sobre negro, banner de título y MVP arriba de la lista.',
+    category: 'general',
     theme: 'dark',
     tokens: {
       bg: '#0c0908',
@@ -62,6 +64,7 @@ export const TEMPLATES: TemplateConfig[] = [
     id: 'medianoche',
     name: 'Medianoche',
     blurb: 'Sobria: azul profundo, todo centrado y MVP en una franja.',
+    category: 'general',
     theme: 'dark',
     tokens: {
       bg: '#060a14',
@@ -87,6 +90,7 @@ export const TEMPLATES: TemplateConfig[] = [
     id: 'marfil',
     name: 'Marfil',
     blurb: 'Editorial y de premiación: marfil claro, puntos guía y ordinales (1.º).',
+    category: 'general',
     theme: 'light',
     tokens: {
       bg: '#f3eee2',
@@ -108,19 +112,20 @@ export const TEMPLATES: TemplateConfig[] = [
     numerals: 'ordinal',
   },
   {
-    // 5 · Grafito y naranja, cifras grandes a la derecha, fichas, ángulos rectos.
+    // 5 · Concreto claro y naranja de pista, cifras grandes, fichas, ángulos rectos.
     id: 'pista',
     name: 'Pista',
-    blurb: 'Deportiva: grafito y naranja, cifras grandes y fichas de posición.',
-    theme: 'dark',
+    blurb: 'Deportiva: concreto claro y naranja, cifras grandes y fichas de posición.',
+    category: 'general',
+    theme: 'light',
     tokens: {
-      bg: '#121212',
-      surface: '#1b1b1b',
-      border: '#333333',
-      text: '#f5f5f2',
-      muted: '#a0a09a',
-      accent: '#ff7a1a',
-      accent2: '#ffd166',
+      bg: '#e8e8e3',
+      surface: '#f6f6f2',
+      border: '#c9c9c1',
+      text: '#151515',
+      muted: '#5b5b55',
+      accent: '#e8590c',
+      accent2: '#b7791f',
     },
     fontPairId: 'p5',
     header: 'split',
@@ -137,6 +142,7 @@ export const TEMPLATES: TemplateConfig[] = [
     id: 'granate',
     name: 'Granate',
     blurb: 'Elegante: vino y champán, centrada, con números grandes serif.',
+    category: 'general',
     theme: 'dark',
     tokens: {
       bg: '#12060b',
@@ -162,6 +168,7 @@ export const TEMPLATES: TemplateConfig[] = [
     id: 'cobalto',
     name: 'Cobalto',
     blurb: 'Cobalto y amarillo: banner luminoso, podio en fila y MVP arriba.',
+    category: 'general',
     theme: 'dark',
     tokens: {
       bg: '#0a1650',
@@ -183,19 +190,20 @@ export const TEMPLATES: TemplateConfig[] = [
     numerals: 'pad',
   },
   {
-    // 8 · Verdes y cobre, podio héroe, fichas, serifa gruesa.
-    id: 'selva',
-    name: 'Selva',
-    blurb: 'Exuberante: verdes y cobre con podio héroe y fichas de posición.',
-    theme: 'dark',
+    // 8 · Arena: concreto cálido, terracota y teal, podio héroe, fichas, slab.
+    id: 'arena',
+    name: 'Arena',
+    blurb: 'Cálida y clara: arena y terracota con podio héroe y fichas de posición.',
+    category: 'general',
+    theme: 'light',
     tokens: {
-      bg: '#0b160f',
-      surface: '#122219',
-      border: '#25402f',
-      text: '#efe8d4',
-      muted: '#98ad9c',
-      accent: '#9bd16b',
-      accent2: '#d9a066',
+      bg: '#efe3cf',
+      surface: '#f8f0e0',
+      border: '#d3c2a3',
+      text: '#2a2118',
+      muted: '#6b5d4a',
+      accent: '#b5532a',
+      accent2: '#2f6f62',
     },
     fontPairId: 'p8',
     header: 'left',
@@ -212,6 +220,7 @@ export const TEMPLATES: TemplateConfig[] = [
     id: 'hielo',
     name: 'Hielo',
     blurb: 'Fría y clara: azul acero y ámbar, cuadrícula de papel y numeración #4.',
+    category: 'general',
     theme: 'light',
     tokens: {
       bg: '#eaf0f4',
@@ -237,6 +246,7 @@ export const TEMPLATES: TemplateConfig[] = [
     id: 'ambar',
     name: 'Ámbar',
     blurb: 'Retro: negro y ámbar con líneas de pantalla y cifras en mono.',
+    category: 'general',
     theme: 'dark',
     tokens: {
       bg: '#0a0a09',
@@ -257,10 +267,99 @@ export const TEMPLATES: TemplateConfig[] = [
     radius: 0,
     numerals: 'pad',
   },
+  {
+    // 11 · Booyah (FF): negro cálido, naranja/ámbar, banner, podio héroe,
+    // chips cuadrados, MVP arriba, chevrones. Sello BOOYAH ×N si hay booyahs.
+    id: 'booyah',
+    name: 'Booyah',
+    blurb: 'Free Fire: negro cálido y naranja, podio héroe y sello BOOYAH.',
+    category: 'free-fire',
+    theme: 'dark',
+    tokens: {
+      bg: '#0d0a06',
+      surface: '#17110a',
+      border: '#3b2a14',
+      text: '#f6efe2',
+      muted: '#b09a7d',
+      accent: '#ff8a00',
+      accent2: '#ffd23a',
+    },
+    fontPairId: 'p11',
+    header: 'banner',
+    podium: 'hero',
+    list: 'chips',
+    mvp: 'strip',
+    mvpPlacement: 'before-list',
+    decor: 'chevrons',
+    radius: 0,
+    numerals: 'pad',
+  },
+  {
+    // 12 · Zona Roja (FF): gris azulado casi negro, rojo/ámbar, split con
+    // cifras, podio en fila, barras, decoración de mapa táctico.
+    id: 'zona-roja',
+    name: 'Zona Roja',
+    blurb: 'Free Fire: la zona que se cierra, con cifras grandes y mapa táctico.',
+    category: 'free-fire',
+    theme: 'dark',
+    tokens: {
+      bg: '#0a0e12',
+      surface: '#121a21',
+      border: '#263541',
+      text: '#eef2f4',
+      muted: '#8c9eab',
+      accent: '#ff3b30',
+      accent2: '#ffb020',
+    },
+    fontPairId: 'p12',
+    header: 'split',
+    podium: 'row',
+    list: 'bars',
+    mvp: 'cards',
+    mvpPlacement: 'after-list',
+    decor: 'zone',
+    radius: 4,
+    numerals: 'plain',
+  },
+  {
+    // 13 · Kalahari (FF): desierto claro, tierra cocida y verde azulado,
+    // centrada, podio escalonado, puntos guía y ordinales.
+    id: 'kalahari',
+    name: 'Kalahari',
+    blurb: 'Free Fire: desierto claro, tierra cocida y cartel de temporada.',
+    category: 'free-fire',
+    theme: 'light',
+    tokens: {
+      bg: '#efe3c9',
+      surface: '#f8f0dc',
+      border: '#d2bf98',
+      text: '#2a1a0e',
+      muted: '#6d5a43',
+      accent: '#c2410c',
+      accent2: '#1f6f6b',
+    },
+    fontPairId: 'p13',
+    header: 'center',
+    podium: 'stepped',
+    list: 'dots',
+    mvp: 'cards',
+    mvpPlacement: 'after-list',
+    decor: 'slashes',
+    radius: 8,
+    numerals: 'ordinal',
+  },
 ];
 
 export function getTemplate(id: string): TemplateConfig {
   return TEMPLATES.find((template) => template.id === id) ?? TEMPLATES[0]!;
+}
+
+/** Ids renombrados en versiones anteriores del catálogo (storage/importación). */
+const TEMPLATE_ID_MIGRATIONS: Record<string, string> = { selva: 'arena' };
+
+/** Traduce un id guardado en una versión vieja al id actual del catálogo. */
+export function migrateTemplateId(id: string): string {
+  return TEMPLATE_ID_MIGRATIONS[id] ?? id;
 }
 
 // ── Geometría base (§3): lienzo lógico 1080, recomposición por formato ───────

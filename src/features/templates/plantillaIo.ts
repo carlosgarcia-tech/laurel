@@ -1,5 +1,5 @@
-import type { Settings } from '../../core/types';
-import { TEMPLATES } from './templates';
+import type { Settings, TemplateStyleOverrides } from '../../core/types';
+import { TEMPLATES, migrateTemplateId } from './templates';
 import { FONT_PAIR_IDS } from './fonts';
 
 export interface TemplateBundle {
@@ -35,15 +35,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Settings con valores de catálogo garantizados: plantilla y par de fuentes
+ * Settings con valores de catálogo garantizados: plantilla y overrides
  * existentes (si no, defaults), para no tumbar la app con un JSON ajeno.
+ * Los campos globales de la v3 (accentColor/textColor/fontFamily) se ignoran.
  */
-function sanitizeSettings(settings: Settings): Settings {
-  const templateId = TEMPLATES.some((t) => t.id === settings.templateId)
-    ? settings.templateId
+function sanitizeSettings(raw: Settings): Settings {
+  const templateId = TEMPLATES.some((t) => t.id === migrateTemplateId(raw.templateId))
+    ? migrateTemplateId(raw.templateId)
     : TEMPLATES[0]!.id;
-  const fontFamily = FONT_PAIR_IDS.has(settings.fontFamily) ? settings.fontFamily : 'p1';
-  return { ...settings, templateId, fontFamily };
+
+  const styleByTemplate: Record<string, TemplateStyleOverrides> = {};
+  const source = (raw as unknown as Record<string, unknown>).styleByTemplate;
+  if (isRecord(source)) {
+    for (const [id, value] of Object.entries(source)) {
+      if (!isRecord(value)) continue;
+      const overrides: TemplateStyleOverrides = {};
+      if (typeof value.accent === 'string') overrides.accent = value.accent;
+      if (typeof value.text === 'string') overrides.text = value.text;
+      if (typeof value.fontPairId === 'string' && FONT_PAIR_IDS.has(value.fontPairId)) {
+        overrides.fontPairId = value.fontPairId;
+      }
+      if (Object.keys(overrides).length > 0) styleByTemplate[migrateTemplateId(id)] = overrides;
+    }
+  }
+
+  const settings = { ...raw, templateId, styleByTemplate } as Settings & Record<string, unknown>;
+  // Campos globales de la v3: no existen más, no deben reentrar en el estado.
+  delete settings.accentColor;
+  delete settings.textColor;
+  delete settings.fontFamily;
+  return settings;
 }
 
 /** Valida e interpreta un JSON de plantilla; null si es inválido. */

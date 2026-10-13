@@ -17,6 +17,8 @@ interface CardArgs {
   totalSize: number;
   minHeight: number;
   highlight: boolean;
+  /** Delay del revelado (solo preview del editor; TEMPLATES-FREEFIRE §6.2). */
+  revealDelay?: number;
   style?: CSSProperties;
 }
 
@@ -29,13 +31,17 @@ function PodiumCard({
   totalSize,
   minHeight,
   highlight,
+  revealDelay,
   style,
 }: CardArgs) {
   const { t, config, fonts } = scene;
   const colors = podiumColors(scene);
   const color = colors[position - 1] ?? t.text2;
+  // Sello BOOYAH ×N (FF §3.3): solo en Booyah, solo el 1.º, solo con booyahs reales.
+  const seal = config.id === 'booyah' && position === 1 && row.booyahs > 0;
   return (
     <div
+      className={revealDelay !== undefined ? 'podium-reveal' : undefined}
       style={{
         flex: 1,
         background: highlight
@@ -50,6 +56,7 @@ function PodiumCard({
         gap: 4,
         minHeight,
         minWidth: 0,
+        ...(revealDelay !== undefined ? { animationDelay: `${revealDelay}ms` } : null),
         ...style,
       }}
     >
@@ -87,6 +94,25 @@ function PodiumCard({
       <span style={{ fontSize: 13, color: t.text2 }}>
         {`${i18n.pill.kills} ${row.kills} · ${i18n.image.booyah} ${row.booyahs}`}
       </span>
+      {seal && (
+        <span
+          style={{
+            border: `2px solid ${t.accent2}`,
+            borderRadius: config.radius,
+            color: t.accent2,
+            fontFamily: fonts.display,
+            fontSize: 15,
+            fontWeight: 800,
+            letterSpacing: 2,
+            lineHeight: 1,
+            padding: '5px 10px',
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {`${i18n.image.booyah} ×${row.booyahs}`}
+        </span>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
         <span
           style={{
@@ -149,6 +175,7 @@ export function Podium({ scene }: { scene: Scene }) {
                 totalSize={position === 1 ? 54 : 38}
                 minHeight={(heights[i] ?? total) * flexShrink}
                 highlight={position === 1}
+                revealDelay={scene.reveal ? (position - 1) * 40 : undefined}
               />
             );
           })}
@@ -172,6 +199,7 @@ export function Podium({ scene }: { scene: Scene }) {
                 totalSize={index === 0 ? 46 : 34}
                 minHeight={rowH * flexShrink}
                 highlight={index === 0}
+                revealDelay={scene.reveal ? index * 40 : undefined}
                 style={index === 0 ? { flex: 1.4 } : undefined}
               />
             );
@@ -193,6 +221,7 @@ export function Podium({ scene }: { scene: Scene }) {
             totalSize={88}
             minHeight={hero}
             highlight={true}
+            revealDelay={scene.reveal ? 0 : undefined}
             style={{ flex: 1.08 }}
           />
           <div
@@ -214,6 +243,7 @@ export function Podium({ scene }: { scene: Scene }) {
                 totalSize={30}
                 minHeight={Math.round((hero - 12 * (rest.length - 1)) / Math.max(1, rest.length))}
                 highlight={false}
+                revealDelay={scene.reveal ? (i + 1) * 40 : undefined}
                 style={{ flex: 1 }}
               />
             ))}

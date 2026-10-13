@@ -7,9 +7,6 @@ export type TiebreakRule = 'kills' | 'best-rank' | 'booyahs';
 /** Formatos de exportación de la imagen final. */
 export type ImageFormat = '4:5' | '9:16' | '1:1';
 
-/** Id del par de fuentes (biblioteca de TEMPLATESv2 §6, p1…p10). */
-export type FontPairId = string;
-
 /** Un jugador dentro de una sala/partida. */
 export interface PlayerEntry {
   /** Nombre limpio para mostrar (invisibles reemplazados por espacio, trim). */
@@ -124,10 +121,6 @@ export interface Settings {
   tiebreak: TiebreakRule[];
   positionPoints: number[];
   killPoints: number;
-  /** Id del par de fuentes activo (p1…p10). */
-  fontFamily: FontPairId;
-  textColor: string;
-  accentColor: string;
   format: ImageFormat;
   /** Opacidad del scrim oscuro sobre el fondo propio (0..1). */
   scrimOpacity: number;
@@ -139,6 +132,9 @@ export interface Settings {
   useDefaultBackground: boolean;
   /** Plantilla activa del catálogo (TEMPLATES.md). */
   templateId: string;
-  /** Overrides de estilo por plantilla (acento/texto/fontPairId). */
+  /**
+   * Overrides de estilo POR PLANTILLA (acento/texto/fontPairId). Sin override
+   * se usan los tokens/par de la propia plantilla (AJUSTES.md P0.1).
+   */
   styleByTemplate: Record<string, TemplateStyleOverrides>;
 }

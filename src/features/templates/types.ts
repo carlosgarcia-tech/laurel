@@ -11,7 +11,16 @@ export type ListV = 'bars' | 'dots' | 'chips';
 export type MvpV = 'cards' | 'strip';
 export type MvpPlacement = 'after-list' | 'before-list';
 export type DecorV =
-  'rings' | 'slashes' | 'arcs' | 'brackets' | 'dots' | 'stripes' | 'grid' | 'scan';
+  | 'rings'
+  | 'slashes'
+  | 'arcs'
+  | 'brackets'
+  | 'dots'
+  | 'stripes'
+  | 'grid'
+  | 'scan'
+  | 'chevrons'
+  | 'zone';
 export type Numerals = 'pad' | 'plain' | 'hash' | 'ordinal';
 export type Radius = 0 | 4 | 8 | 14 | 20;
 
@@ -74,6 +83,8 @@ export interface TemplateConfig {
   id: string;
   name: string;
   blurb: string;
+  /** Categoría de la galería (TEMPLATES-FREEFIRE §2.1): pestañas General / Free Fire. */
+  category: 'general' | 'free-fire';
   theme: 'dark' | 'light';
   tokens: TemplateTokens;
   fontPairId: string;
@@ -98,6 +109,12 @@ export interface TemplateProps {
   format: ImageFormat;
   width: number;
   height: number;
+  /**
+   * Editor-only (TEMPLATES-FREEFIRE §6.2): revela el podio la primera vez que
+   * se renderiza una jornada. La galería y la exportación no lo pasan; además
+   * `data-capture` anula la animación al capturar (§6.3).
+   */
+  reveal?: boolean;
 }
 
 // ── Geometría y escena (§3) ──────────────────────────────────────────────────
@@ -137,4 +154,6 @@ export interface Scene {
   listRows: StandingRow[];
   /** Paginación de la imagen (density multi): undefined si es única. */
   part?: { index: number; total: number };
+  /** Revelar el podio con stagger (solo preview del editor; ver TemplateProps). */
+  reveal: boolean;
 }
