@@ -98,3 +98,98 @@ Formato canónico «12 OCT 2026» (mes abreviado es-MX sin punto) compartido ent
 ### Fuentes nuevas
 
 @fontsource/rubik, archivo y sora (latin 700/800); el selector ofrece 6 fuentes autoalojadas. Solo se cargan los pesos display usados.
+
+## Fase 4 — Sistema de plantillas (según TEMPLATES.md)
+
+### Alcance de esta fase: T0 + T1 + Recibo
+
+Implementado: cimientos (ViewModel, códigos de 3 letras, formatos, titulares, PRNG con semilla, procesadores de imagen con caché), plantillas **Corona** ( conversion de la imagen previa a plantilla), **Gaceta** y **Marcador** (lote T1), más **Recibo** como adelanto del lote T3 (el dueño pidió "otras aparte"). Pendientes para lotes siguientes: Telemetría, Plano, Suizo (T2) y Cartel, Arcade, Zine (T3), la hoja de contactos (`npm run contact-sheet`), la división en varias imágenes (`density: multi`) y los test de Safari.
+
+### Editor de 5 pasos
+
+El paso 4 se convirtió en **Plantilla** (galería con miniaturas reales de 96 px renderizadas a 1080 y escaladas con transform en capa exterior) y el 5 es **Personalización** (acotada por plantilla: Corona pinta color/acento/fuente y presets de tema; Gaceta solo acento; Marcador y Recibo solo acento). Persistencia v3 con migración por merge (`templateId` + `styleByTemplate`).
+
+### Plantillas como JSON
+
+`Exportar plantilla (JSON)` descarga settings + logo/fondo embebidos en base64; `Importar` valida (`app: 'laurel-template'`) y aplica con `commit` de imágenes. Todo local, sin subir nada.
+
+### Procesado de imágenes por receta
+
+`processImage` aplica la receta de cada plantilla al logo/fondo (Corona `scrim`/`original`, Gaceta `mono-ink`/`grayscale`, Marcador `amber`, Recibo `dither`/`scrim`) con caché por `(hash, receta, params)`, acotando el lado a 1200 px. Las funciones de píxel viven en `features/assets/recipes.ts` (puras, testeadas con buffers RGBA conocidos); el canvas solo carga/guarda.
+
+### Reglas aceptadas de la spec
+
+- Titulares generados: solo hechos del ViewModel, deterministas con la semilla (`title|matchday|líder|total`).
+- Sin `Math.random()` en render; imperfecciones deterministas solo en Recibo/Cartel/Zine.
+- Fuente por plantilla: `@fontsource/bodoni-moda + source-serif-4 + ibm-plex-mono` (Gaceta), `vt323 + share-tech-mono` (Marcador), `cutive-mono + courier-prime` (Recibo), cargadas con `import()` perezoso por plantilla (`shared/fonts.ts`), nunca en el bundle inicial.
+- `fitText` como utilidad compartida (no: todas las plantillas usan truncado con elipsis por elipsis segura; fitText queda disponible para los lotes T2/T3).
+
+### Detección de plantilla activa y fallback de ejemplo
+
+Sin logs cargados, el preview y la galería usan VM de ejemplo del fixture integrado (`src/assets/sample_log.txt`, copia del fixture de tests descubierta inicialmente desde `tests/` — movida a assets para no cruzar carpetas en el build). Con logs reales, el VM se construye del engine.
+
+## Fase 5 — Reescritura de plantillas según TEMPLATESv2
+
+### Motivo
+
+`TEMPLATESv2.md` reemplaza a `TEMPLATES.md`: las plantillas ya no son conceptos distintos
+(periódico, ticket, marcador LED…) sino **10 variantes de UNA misma estructura** (la de
+Corona). Se eliminaron **Gaceta, Marcador y Recibo** con todo su código, estilos y fuentes.
+
+### Arquitectura adoptada (§2)
+
+- Un único componente `src/features/templates/ResultImage.tsx` compone el esqueleto:
+  `Decor → Header → (MVP si before-list) → Podium → StandingsList → (MVP si after-list) → Footer`.
+- Las secciones (`sections/Header|Podium|StandingsList|MvpBlock|Footer|Decor.tsx`) implementan
+  las variantes exactas de la §4 y solo leen el objeto `Scene` (ViewModel + tokens derivados +
+  geometría): sin lógica de negocio.
+- **Agregar una plantilla = agregar un objeto** en `templates.ts` (id, tokens, variantes,
+  par de fuentes). La tabla 5.1 y los tokens 5.2 van copiados tal cual; ningún override creativo.
+
+### Tokens y utilidades
+
+- `tokens.ts`: `mix()` (sRGB), `readableOn()` (WCAG ≥ 4.5), `deriveTokens()`
+  (`rowAlt`, `track`, `text2`, plata/bronce por tema, `onAccent`), radios y `positionLabel`
+  (`pad`/`plain`/`hash`/`ordinal`). La transparencia decorativa usa `color-mix`, nunca filtros.
+- Test de "≥ 3 cambios respecto a Corona" en `tests/templates.test.tsx` (§1.3).
+
+### Tipografías (§6)
+
+- Biblioteca de pares P1–P10 en `fonts.ts` con imports dinámicos por `import()`: solo
+  latin + latin-ext, pesos usados. P1 (Syne + Space Grotesk) sigue en el bundle inicial;
+  el CSS inicial se recortó a ese par (se quitaron Oxanium/Rubik/Sora/Archivo del arranque).
+- Sustitución documentada: `share-tech-mono` no publica subset `latin-ext` (cobertura limitada
+  del paquete); se importa solo su `latin` — el fallback system cubre el resto.
+
+### Personalización y persistencia
+
+- Acento, texto y par de fuentes ahora son editables **en todas** las plantillas (§7);
+  se eliminó el fieldset de "temas" exclusivo de Corona y el uso de `THEMES`
+  (`core/style/themes.ts` borrado; el campo `theme` persistido queda inert por compatibilidad).
+- `fontFamily` ahora guarda el **id del par** (`p1…p10`); `loadSettings()`/`sanitizeSettings()`
+  normalizan valores legados/externos a pares y plantillas válidos.
+- El scrim del fondo se hornea siempre vía `processImage('scrim')` con **tinta según el tema**
+  (oscura en dark, clara en light); `applyScrim()` acepta tinta opcional (tests actualizados).
+
+### Geometría y multi-imagen
+
+- `GEOMETRY` por formato (4:5 base; 9:16 y 1:1 recomponen alturas, no escalan). 1:1 omite
+  píldoras y force el MVP `strip` por densidad de espacio.
+- Densidad: `comfortable ≤ 10 · compact 11–16 · multi > 16`. `multi` recorta la lista a la
+  capacidad del lienzo y el pie marca «Parte 1/2». La **selección de página** (navegar 1/2…2/2)
+  queda pendiente de interfaz; hoy siempre se exporta la parte 1.
+
+### Rendimiento (§8)
+
+- JS inicial del entry principal ≈ 21 KB gzip (main+index+react); el chunk compartido
+  `fonts-*.js` (81 KB gzip, react-dom + fixture de ejemplo) se **module-preloads** por
+  dependencia entre entries pero no bloquea la ejecución inicial: total en red ≈ 102 KB
+  gzip, dentro del presupuesto ≲ 200 KB (AGENTS §11). Pulido posible pendiente: mover el
+  fixture de ejemplo a un import() `?raw` diferido.
+- Los CSS de P2–P10 quedan como chunks diferidos individuales (verificados en dist/).
+
+### Hoja de contactos (§10)
+
+- `npm run contact-sheet` (página multi-entry de Vite, `contact-sheet.html`) renderiza las 10
+  plantillas con el log de muestra en 4:5. La verificación visual («misma familia» vs «solo
+  cambio de color») queda al ojo del dueño: en este entorno no hay navegador para capturar.

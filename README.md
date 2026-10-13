@@ -57,3 +57,29 @@ Desempates configurables (aplicados tras ordenar por total descendente): más ki
 - El fixture de tests (`tests/fixtures/MatchResult_example_log.txt`) es una reconstrucción sintética a partir de los datos verificados del spec; se reemplazará por el log real del dueño cuando esté disponible.
 - En Safari la primera exportación PNG puede salir sin imágenes/fuentes: se mitigará en fase 3 con una exportación de calentamiento (se documentará aquí).
 - La interfaz del editor llega en la fase 2; por ahora la app muestra un placeholder informativo.
+
+## Plantillas (sistema TEMPLATESv2)
+
+Una sola estructura (la de **Corona**) con 10 variantes: cambian colores, tipografía,
+posiciones y formatos, pero todas mantienen los mismos bloques (cabecera + píldoras,
+podio, lista 4+, MVP y pie).
+
+| Plantilla                | Tema   | Rasgos                                                       |
+| ------------------------ | ------ | ------------------------------------------------------------ |
+| **Corona** (por defecto) | oscura | esmeralda/dorado, podio escalonado, barras, anillos          |
+| **Brasa**                | oscura | rojo-naranja, banner, MVP arriba, diagonales, ángulos rectos |
+| **Medianoche**           | oscura | azul profundo, todo centrado, MVP en franja, arcos           |
+| **Marfil**               | clara  | marfil + verde bosque, podio héroe, puntos guía, `1.º`       |
+| **Pista**                | oscura | grafito/naranja, cifras grandes, chips de posición, rayas    |
+| **Granate**              | oscura | vino/champán, centrada, anillos finos, serif                 |
+| **Cobalto**              | oscura | banner amarillo, podio en fila, MVP arriba, ángulos rectos   |
+| **Selva**                | oscura | verdes/cobre, podio héroe, chips, retícula de puntos         |
+| **Hielo**                | clara  | azul acero/ámbar, cuadrícula, numeración `#4`                |
+| **Ámbar**                | oscura | negro/ámbar, `scan` de pantalla, cifras en mono              |
+
+En todas: par de fuentes editable (10 pares autoalojados, carga perezosa), color de
+acento, color de texto, logo y fondo propio (scrim horneado según el tema). Los overrides
+se guardan por plantilla (`styleByTemplate`). Contraste mínimo verificado ≥ 4.5:1.
+
+**Hoja de contactos:** `npm run contact-sheet` muestra las 10 plantillas lado a lado
+(local Vite page, `contact-sheet.html`).
